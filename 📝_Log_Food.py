@@ -45,8 +45,19 @@ from streamlit_extras.bottom_container import bottom
 st.set_page_config(
     page_title= "💋 Baby Tracker",
     layout="centered", 
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
+# KIll reszie handle on plotly
+st.markdown("""
+    <style>
+    /* Completely disable the drag-to-resize handle on all data_editors */
+    [data-testid="stDataFrameResizable"] {
+        resize: none !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+# For mobile configuration:
+
 ### END CONFIGURATION ###
 ### BEGIN INDEP DICTIONARY ###
 # 1. Macro Configuration Dictionary
@@ -247,13 +258,16 @@ def figure_progress_bar(
         plot_bgcolor="rgba(255,255,255,0.1)",
         height=30
     )
-    fig.update_xaxes(visible=False)
-    fig.update_yaxes(visible=False)
+    # Hide fluff and lock axes
+    fig.update_xaxes(visible=False, fixedrange=True) # <-- Add fixedrange=True
+    fig.update_yaxes(visible=False, fixedrange=True) # <-- Add fixedrange=True
 
     # Add rounded corners AND explicitly enforce the auto text position
     fig.update_traces(
-        marker_cornerradius=4, # Adjust this number for more/less rounding
-        textposition="auto"     # Keeps the smart inside/outside placement
+        marker_cornerradius=4, 
+        textposition="auto",
+        hoverinfo="skip",      
+        hovertemplate=None     
     )
     return fig
 # 8. Define a number display counter
@@ -396,7 +410,8 @@ for col, (macro, config) in zip(bar_cols, macros_config.items()):
             bar_color = config["color_primary"], 
             projected_bar_color =config["color_secondary"],
             overflow_color = config["color_overflow"],
-            projected_overflow_color = config["color_overflow2"]))
+            projected_overflow_color = config["color_overflow2"]),
+            config={'displayModeBar': False})
 # 2. Second Row: The main date table
 filtered_df = st.session_state.food_df[st.session_state.food_df["date"] == st.session_state.date_filter_value].copy()
 
@@ -449,8 +464,9 @@ with bottom():
         col_time.time_input("Time", key ="time")
 
 
-        # 5. Fifth Row: The lower buttons of ingredient and log button    
-        spacerfkjasdbflkjadfjkadf,add_ingredient_button, log_button = st.columns([9,3,1.5])
+        # 5. Fifth Row: The lower buttons of ingredient and log button  
+          
+        add_ingredient_button, log_button = st.columns([1,1])
         # 5.1  Log food
         log_button.button("➕Log", on_click=log_food)
 
