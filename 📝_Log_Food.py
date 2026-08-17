@@ -397,8 +397,8 @@ def food_input_dialog():
         key="food_name",
         on_change=fill_matching_data,
     )
-    col_date.date_input("Date", key="date")
-    col_time.time_input("Time", key="time")
+    col_date.date_input("Date", key="date", value=st.session_state["date"])
+    col_time.time_input("Time", key="time", value=st.session_state["time"])
 
     st.divider()
 
