@@ -114,13 +114,12 @@ macros_config = {
 # Combines: input_str_list, input_str_list_norm, input_initial_values
 inputs_config = {
     "Food":     {"norm": "food_name", "initial": ""},
-    "Calories": {"norm": "calories",  "initial": 0},
-    "Carbs":    {"norm": "carbs",     "initial": 0},
-    "Protein":  {"norm": "protein",   "initial": 0},
-    "Fat":      {"norm": "fat",       "initial": 0},
+    "Calories": {"norm": "calories",  "initial": 0.0},
+    "Carbs":    {"norm": "carbs",     "initial": 0.0},
+    "Protein":  {"norm": "protein",   "initial": 0.0},
+    "Fat":      {"norm": "fat",       "initial": 0.0},
     "Time":     {"norm": "time",      "initial":  datetime.datetime.now(LOCAL_TZ).time()},
-    "Date":     {"norm": "date",      "initial":  datetime.datetime.now(LOCAL_TZ).date()},
-    "Datetime": {"norm": "datetime", "initial": datetime.datetime.now(LOCAL_TZ)}
+    "Date":     {"norm": "date",      "initial":  datetime.datetime.now(LOCAL_TZ).date()}
 }
 ### END INDEP DICTIONARIES ###
 ### BEGIN DEFINITIONS ###
@@ -172,6 +171,8 @@ def log_food():
         # Clear input fields after adding ingredient
         for x in inputs_config.values():
                 st.session_state[x["norm"]] = x["initial"]
+        # MANUALLY clear the new UI-only datetime widget
+        st.session_state["datetime"] = datetime.datetime.now(LOCAL_TZ)
     else:
         st.error("Please fill in all fields with valid values.")
     
@@ -295,15 +296,15 @@ def fill_matching_data():
         for macro in macros_config:
         # Dynamically update the session state
             st.session_state[macro.lower()] = newest_same_name_df[macro.lower() ]
-# 10. Define initializer for simple objects/ not from supabase
+# 10. Define initializer for simple objects/ not from gsheet
 def simple_initializer(name:str, initial_value):
     if name not in st.session_state:
         st.session_state[name] = initial_value
 # 11. Function that reset the session_state values for the username change
 def username_change_reset():
-    save_before_clearing = st.session_state.selected_user
-    st.session_state.clear()
-    st.session_state.selected_user = save_before_clearing
+    for key in list(st.session_state.keys()):
+        if key != "selected_user":
+            del st.session_state[key]
 # 12. New combined progress bar function
 def combined_progress_bar(filtered_food_sum):
     # Concept: Lists and Dictionaries. 
@@ -337,6 +338,7 @@ def combined_progress_bar(filtered_food_sum):
             y_label = f"{config['emoji']} {macro}<br>{number_display_cur:.0f}/{number_display_max:.0f}"
 
         # Append dictionaries (rows) to our master list
+        # Notice we combine the macro name and type to ensure unique colors
         all_data.extend([
             {"Shelf": y_label, "Value": bar1,      "Type": f"{macro} Current"},
             {"Shelf": y_label, "Value": bar2,      "Type": f"{macro} Projected"},
@@ -409,7 +411,7 @@ def food_input_dialog():
     # Loop through the dictionary WITHOUT creating st.columns
     for macro, config in macros_config.items():
         macro_lower = macro.lower()
-        step_value = 50 if macro == "Calories" else 1
+        step_value = 50.0 if macro == "Calories" else 5.0
 
         # B. Define the variables
         current_val = filtered_food_sum[macro_lower]
@@ -419,9 +421,10 @@ def food_input_dialog():
         # A. The Number Input (Occupies 1 full row)
         st.number_input(
             label = f"{config['emoji']} {macro} ({'kcal' if macro == 'Calories' else 'g'})" + f"{number_if_overflow(current_val, projected_val, max_val)}" , 
-            min_value=0, 
+            min_value=0.0, 
             step=step_value, 
-            key=macro_lower
+            key=macro_lower,
+            format="%.2f"
         )
         
 
@@ -435,7 +438,7 @@ def food_input_dialog():
                 overflow_color=config["color_overflow"],
                 projected_overflow_color=config["color_overflow2"]
             ),
-            use_container_width=True,
+            width= "stretch",
             config={'displayModeBar': False}
         )
     
