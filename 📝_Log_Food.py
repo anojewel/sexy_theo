@@ -494,7 +494,7 @@ conn = st.connection("supabase", type=SupabaseConnection)
 
 ### BEGIN INITIALIZATION ###
 # 1. Initialize selected user
-simple_initializer(name = "selected_user", initial_value = "Guest")
+simple_initializer(name = "selected_user", initial_value = "Sexy Theo")
 # 2. Initialize food_df data frame with the data from supabase
 simple_initializer(name = "food_df", initial_value= load_food_data(st.session_state.selected_user))
 # 3. Initialize session state keys, for the input fields
@@ -551,10 +551,10 @@ filtered_df_local = st.session_state.filtered_df = st.data_editor(data = st.sess
         "Save Marker": None,
         "id": None,
         "food_name": st.column_config.TextColumn(label="Food", width="small"),
-        "calories": st.column_config.NumberColumn(format="%.0f",label = "Calories", width = "small"),
-        "carbs": st.column_config.NumberColumn(format="%.0f", label = "Carbs", width ="small"),
-        "protein": st.column_config.NumberColumn(format="%.0f", label = 'Protein', width ="small"),
-        "fat": st.column_config.NumberColumn(format="%.0f", label = 'Fat', width ="small"),
+        "calories": st.column_config.NumberColumn(format="%.2f",label = "Calories", width = "small"),
+        "carbs": st.column_config.NumberColumn(format="%.2f", label = "Carbs", width ="small"),
+        "protein": st.column_config.NumberColumn(format="%.2f", label = 'Protein', width ="small"),
+        "fat": st.column_config.NumberColumn(format="%.2f", label = 'Fat', width ="small"),
         "time": st.column_config.TimeColumn(format="HH:mm", label = 'Time', width ="small")
     }) 
 
