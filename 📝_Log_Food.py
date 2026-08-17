@@ -33,14 +33,17 @@
 # Day 13:
 # data_editor connect with bar
 # Added bottom container, discovered streamlit extras
-# Deploy
+# Deploy for the first time 
+# Day 14:
+# Mobile ui restricts one element on 1 row, need UI overhaul
 ### IMPORTS ###
 import streamlit as st
 import datetime 
 import pandas as pd
 import plotly.express as px
 from st_supabase_connection import SupabaseConnection
-from streamlit_extras.bottom_container import bottom
+from streamlit_extras.floating_button import floating_button
+from zoneinfo import ZoneInfo
 ### BEGIN CONFIGURATION ###
 st.set_page_config(
     page_title= "💋 Baby Tracker",
@@ -56,7 +59,8 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-# For mobile configuration:
+# for fucking up timezones
+LOCAL_TZ = ZoneInfo("Asia/Taipei")
 
 ### END CONFIGURATION ###
 ### BEGIN INDEP DICTIONARY ###
@@ -109,8 +113,8 @@ inputs_config = {
     "Carbs":    {"norm": "carbs",     "initial": 0},
     "Protein":  {"norm": "protein",   "initial": 0},
     "Fat":      {"norm": "fat",       "initial": 0},
-    "Time":     {"norm": "time",      "initial": datetime.datetime.now().time()},
-    "Date":     {"norm": "date",      "initial": datetime.date.today()}
+    "Time":     {"norm": "time",      "initial":  datetime.datetime.now(LOCAL_TZ).time()},
+    "Date":     {"norm": "date",      "initial":  datetime.datetime.now(LOCAL_TZ).date()}
 }
 ### END INDEP DICTIONARIES ###
 ### BEGIN DEFINITIONS ###
@@ -301,9 +305,185 @@ def username_change_reset():
     save_before_clearing = st.session_state.selected_user
     st.session_state.clear()
     st.session_state.selected_user = save_before_clearing
-# 12. Toggle function for the bottom menu show hide
-def toggle_menu():
-    st.session_state.show_bottom_menu = not st.session_state.show_bottom_menu
+# 12. New combined progress bar function
+def combined_progress_bar(filtered_food_sum):
+    # Concept: Lists and Dictionaries. 
+    # We will gather all our rows in a list, then convert it to a DataFrame.
+    all_data = []
+    color_map = {}
+    
+    # Loop through your macros_config just like you did in the UI
+    for macro, config in macros_config.items():
+        macro_lower = macro.lower()
+        
+        # Calculate current and max values
+        number_display_cur = st.session_state[macro_lower] + filtered_food_sum[macro_lower]
+        number_display_max = st.session_state[config["max_key"]]
+        
+        # BUCKET CONCEPT
+        factor = filtered_food_sum[macro_lower] / number_display_max
+        projected_factor = st.session_state[macro_lower] / number_display_max
+        
+        bucket = 1
+        bar1 = min(factor, bucket)
+        overflow1 = max(0, factor - bucket)
+        small_bucket = min(bucket, 1 - bar1)
+        bar2 = min(projected_factor, small_bucket)
+        overflow2 = max(0, projected_factor - small_bucket)
+        
+        # Create a dynamic label for the Y-axis that includes your text and emojis!
+        if number_display_cur > number_display_max:
+            y_label = f"{config['emoji']} {macro}<br>{number_display_cur:.0f}/{number_display_max:.0f} (+{number_display_cur - number_display_max:.0f})"
+        else:
+            y_label = f"{config['emoji']} {macro}<br>{number_display_cur:.0f}/{number_display_max:.0f}"
+
+        # Append dictionaries (rows) to our master list
+        # Notice we combine the macro name and type to ensure unique colors
+        all_data.extend([
+            {"Shelf": y_label, "Value": bar1,      "Type": f"{macro} Current"},
+            {"Shelf": y_label, "Value": bar2,      "Type": f"{macro} Projected"},
+            {"Shelf": y_label, "Value": overflow1, "Type": f"{macro} Overflow"},
+            {"Shelf": y_label, "Value": overflow2, "Type": f"{macro} Projected Overflow"},
+        ])
+        
+        # Assign the correct hex codes to our unique type names
+        color_map[f"{macro} Current"] = config["color_primary"]
+        color_map[f"{macro} Projected"] = config["color_secondary"]
+        color_map[f"{macro} Overflow"] = config["color_overflow"]
+        color_map[f"{macro} Projected Overflow"] = config["color_overflow2"]
+
+    # Convert the massive list of dictionaries into one Pandas DataFrame
+    df = pd.DataFrame(all_data)
+    
+    # Plotly magic using our combined DataFrame and dynamic color map
+    fig = px.bar(
+        data_frame=df,
+        x="Value",
+        y="Shelf",
+        color="Type",
+        orientation="h",
+        barmode="stack",
+        color_discrete_map=color_map,
+        range_x = [0, max(1, factor + projected_factor)],
+    )   
+    
+    # Hide fluff but MAKE SURE Y-AXIS IS VISIBLE so your labels show!
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=10, b=0), # Added slight top margin
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(255,255,255,0.02)",
+        height=250 # Increased height so 4 bars fit comfortably
+    )
+    
+    fig.update_xaxes(visible=False, fixedrange=True) 
+    # Important: Set yaxes to visible=True so we see the emojis and numbers
+    fig.update_yaxes(visible=True, fixedrange=True, title=None, autorange = "reversed") 
+
+    fig.update_traces(
+        marker_cornerradius=4, 
+        hoverinfo="skip",      
+        hovertemplate=None     
+    )
+    return fig
+# 13. Floating dialog for logging food
+@st.dialog("➕ Log New Food")
+def food_input_dialog():
+    # 1. Top Row: Text, Date, and Time inputs
+    col_food, col_time, col_date = st.columns([4, 2, 2]) 
+    
+    col_food.text_input(
+        label="Food Name", 
+        key="food_name",
+        on_change=fill_matching_data,
+    )
+    col_date.date_input("Date", key="date")
+    col_time.time_input("Time", key="time")
+
+    st.divider()
+
+    # 2. Mobile-Friendly Macro Inputs & Individual Bars
+    # Calculate the sum of food already eaten today
+    filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
+
+    # Loop through the dictionary WITHOUT creating st.columns
+    for macro, config in macros_config.items():
+        macro_lower = macro.lower()
+        step_value = 50 if macro == "Calories" else 1
+        
+        # A. The Number Input (Occupies 1 full row)
+        st.number_input(
+            f"{config['emoji']} {macro} ({'kcal' if macro == 'Calories' else 'g'})", 
+            min_value=0, 
+            step=step_value, 
+            key=macro_lower
+        )
+        
+        # B. Define the variables for your old function
+        current_val = filtered_food_sum[macro_lower]
+        projected_val = st.session_state[macro_lower]
+        max_val = st.session_state[config["max_key"]]
+        
+        # C. The Old Caption Text (Occupies 1 full row)
+        if current_val + projected_val > max_val:
+            st.caption(f":red[{current_val:.0f}/{max_val:.0f} | + {projected_val:.0f} ({(current_val + projected_val - max_val) / max_val * 100:.0f}% Overflow)]")
+        else:
+            st.caption(f"{current_val:.0f}/{max_val:.0f} | + {projected_val:.0f}")
+
+        # D. The Original Progress Bar (Occupies 1 full row)
+        st.plotly_chart(
+            figure_progress_bar(
+                factor=current_val / max_val, 
+                projected_factor=projected_val / max_val, 
+                bar_color=config["color_primary"], 
+                projected_bar_color=config["color_secondary"],
+                overflow_color=config["color_overflow"],
+                projected_overflow_color=config["color_overflow2"]
+            ),
+            use_container_width=True,
+            config={'displayModeBar': False}
+        )
+        
+        # Add a tiny bit of vertical spacing between each macro group
+        st.markdown("<br>", unsafe_allow_html=True) 
+    
+    st.divider()
+    
+    # 3. Bottom Row: Action buttons
+    col_log, col_ingredient = st.columns(2)
+    
+    # Use on_click=log_food so the state clears BEFORE widgets instantiate on the next run!
+    if col_log.button("➕ Log Food", on_click=log_food, use_container_width=True, type="primary"):
+        st.rerun() # Closes the dialog
+        
+    col_ingredient.button("🥣 Ingredient Mode", use_container_width=True)
+
+# 14. Segmented Control Callback Action
+def handle_save_segment():
+    # Grab the value of what the user just clicked
+    action = st.session_state.save_action_segment
+    
+    if action == "💾 Save":
+        save_changes()
+        # Non-blocking temporary green text!
+        st.toast("✅ Saved successfully!", icon="✅") 
+    elif action == "🗑️ Discard":
+        delete_changes()
+        st.toast("🗑️ Changes discarded.", icon="🗑️")
+        
+    # Crucial step: Reset the state to None so the button visually "un-clicks"
+    st.session_state.save_action_segment = None
+
+@st.dialog("Set Maximum Target")
+def open_set_max():
+    for x, y in macros_config.items():
+        st.number_input(label = x, width = 100, value = st.session_state[y["max_key"]], key = y["max_key"])
+    st.button(
+        label = "Save", 
+        on_click = save_max,
+        disabled = any(st.session_state[x["max_key"]] == 0 for x in macros_config.values())
+        )
+
 ### END DEFINITIONS ###
 
 ### BEGIN BACKEND CONNECTION ###
@@ -335,8 +515,8 @@ simple_initializer(
 )
 ### END INITIALIZATION ###
 
-### BEGIN UI ###
-# Sidebar username selector
+### BEGIN SIDEBAR UI ###
+# 1. username selector
 with st.sidebar:
     st.selectbox(
         label = "Select User",
@@ -344,74 +524,23 @@ with st.sidebar:
         key = "selected_user",
         on_change = username_change_reset
     )
-# 1. First Row
-date_column, spacer_lakjsdfhlajksdfh, set_maximum_column, save_changes_column, delete_changes_column = st.columns([2,6,2,1,1])
-
+# 2. Setting maximum
+    if st.button("Set Max Target"):
+         open_set_max()
+### END SIDEBAR UI ###
+### BEGIN UI ###
+# 1. Display the bars in the first row
+filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
+st.plotly_chart(
+    combined_progress_bar(filtered_food_sum), 
+    use_container_width=True, 
+    config={'displayModeBar': False}
+)
+date_column, save_changes_column = st.columns([2,1])
 # 1.2 Date Picker and Variable Assignment
 date_column.date_input(label="Date", 
     value=datetime.date.today(), 
     label_visibility="collapsed", key = "date_filter_value")
-
-# 1.3 POP UP WINDOW FOR SETTING MAXIMUM
-with set_maximum_column.popover(label = "Set Max", width = "stretch"):
-    for x, y in macros_config.items():
-        st.number_input(label = x, width = 100, value = st.session_state[y["max_key"]], key = y["max_key"])
-    st.button(
-        label = "Save", 
-        on_click = save_max,
-        disabled = any(st.session_state[x["max_key"]] == 0 for x in macros_config.values())
-        )
-    #  Check if there are any new rows OR any edits
-has_new_rows = st.session_state.food_df["id"].isna().any()
-    # Initialize the has_edits as false
-has_edits = False
-if "main_editor" in st.session_state:
-    if len(st.session_state["main_editor"]["edited_rows"]) > 0:
-        has_edits = True
-
-    # Disable buttons if there are NO new rows AND NO edits
-buttons_disabled = not (has_new_rows or has_edits)
-
-# 1.4 Display the save changes button
-save_changes_column.button(
-    label="💾",
-    on_click=save_changes,
-    type="secondary",
-    disabled=buttons_disabled
-)
-
-# 1.5 Display the delete/discard button
-delete_changes_column.button(
-    label="🗑️",
-    type="secondary",
-    on_click=delete_changes,
-    disabled=buttons_disabled 
-)
-# 2.  Display the bars in new second row
-# Sum the data here, Needs to be here for the bars.
-filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
-bar_cols = st.columns(4) 
-for col, (macro, config) in zip(bar_cols, macros_config.items()):
-    # Calculate once per loop iteration using explicit names
-    number_display_cur = st.session_state[macro.lower()] + filtered_food_sum[macro.lower()]
-    number_display_max = st.session_state[config['max_key']]
-    
-    # Inline overflow/remaining display in caption
-    col.caption(
-        f"{config["emoji"]} :red[{number_display_cur:.0f}/{number_display_max:.0f} | + {number_display_cur - number_display_max:.0f} ({(number_display_cur - number_display_max) / number_display_max * 100:.0f}%)]" 
-        if number_display_cur > number_display_max 
-        else f"{config["emoji"]} {number_display_cur:.0f}/{number_display_max:.0f} | - {number_display_max - number_display_cur:.0f} ({(number_display_max - number_display_cur) / number_display_max * 100:.0f}%)"
-    )
-    # Display progress bars
-    col.plotly_chart(
-        figure_progress_bar(
-            factor = filtered_food_sum[macro.lower()]/st.session_state[config["max_key"]], 
-            projected_factor = (st.session_state[macro.lower()])/st.session_state[config["max_key"]], 
-            bar_color = config["color_primary"], 
-            projected_bar_color =config["color_secondary"],
-            overflow_color = config["color_overflow"],
-            projected_overflow_color = config["color_overflow2"]),
-            config={'displayModeBar': False})
 # 2. Second Row: The main date table
 filtered_df = st.session_state.food_df[st.session_state.food_df["date"] == st.session_state.date_filter_value].copy()
 
@@ -424,7 +553,7 @@ filtered_df = st.data_editor(data = filtered_df,
         "date": None, 
         "Save Marker": None,
         "id": None,
-        "food_name": st.column_config.TextColumn(label="Food", width="medium"),
+        "food_name": st.column_config.TextColumn(label="Food", width="small"),
         "calories": st.column_config.NumberColumn(format="%.0f",label = "Calories", width = "small"),
         "carbs": st.column_config.NumberColumn(format="%.0f", label = "Carbs", width ="small"),
         "protein": st.column_config.NumberColumn(format="%.0f", label = 'Protein', width ="small"),
@@ -432,45 +561,32 @@ filtered_df = st.data_editor(data = filtered_df,
         "time": st.column_config.TimeColumn(format="HH:mm", label = 'Time', width ="small")
     }) 
 # Take a snapshot of the table TO SESSION STATE so the Save button can find the IDs later!
-st.session_state.filtered_df = filtered_df
+#  Check if there are any new rows OR any edits
+has_new_rows = st.session_state.food_df["id"].isna().any()
+        # Initialize the has_edits as false
+has_edits = False
+if "main_editor" in st.session_state:
+    if len(st.session_state["main_editor"]["edited_rows"]) > 0:
+        has_edits = True
 
-# Put inside a bottom container
-with bottom():
-    if st.session_state.show_bottom_menu:
-        emoji_label = "🔽" # Point down to close
-    else:
-        emoji_label = "🔼" # Point up to open
-
-    spacerljkngtnjk, toggle_button, spacernjkgmf = st.columns([3,1,3])
-
-    toggle_button.button(label=emoji_label, on_click=toggle_menu)
-    if st.session_state.show_bottom_menu:
-        macro_input_cols = st.columns(4) 
-
-        for col, (macro, config) in zip(macro_input_cols, macros_config.items()):
-            step_value = 50 if macro == "Calories" else 1
-            col.number_input(f"{config["emoji"]}{macro} ({"kcal" if macro == "Calories" else "g"})", min_value = 0, step = step_value, key = macro.lower())
-
-        # 4. Fourth Row: Text and date inputs
-        col_food, col_time, col_date = st.columns([4,1,1]) #Creates column for food name and date time
-        # 4.1 Text input with past matching function
-        col_food.text_input(
-            label = "Food Name", 
-            key = "food_name",
-            on_change = fill_matching_data,
-            )
-        # 4.2 Simple datetime inputs
-        col_date.date_input("Date", key ="date")
-        col_time.time_input("Time", key ="time")
-
-
-        # 5. Fifth Row: The lower buttons of ingredient and log button  
-          
-        add_ingredient_button, log_button = st.columns([1,1])
-        # 5.1  Log food
-        log_button.button("➕Log", on_click=log_food)
-
-        # 6.1 Ingredient omde
-        add_ingredient_button.button("🥣 Ingredient Mode")
-
+    # Disable buttons if there are NO new rows AND NO edits
+buttons_disabled = not (has_new_rows or has_edits)
+# The segmented control that acts like a dual-button row
+st.segmented_control(
+    label="Save or Discard",
+    options=["💾 Save", "🗑️ Discard"],
+    label_visibility="collapsed", # Hides the label so it looks like pure buttons
+    selection_mode="single",
+    key="save_action_segment",
+    on_change=handle_save_segment,
+    disabled=buttons_disabled #this isdefined earlier to check if new stuff is in the food data
+)
 ### END UI ###
+
+### INPUT FIELD UI ###
+# Floating action button
+button_clicked = floating_button(
+    label="🍔 Add Food"
+)
+if button_clicked:
+    food_input_dialog() # Opens the @st.dialog window
