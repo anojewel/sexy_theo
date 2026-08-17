@@ -295,7 +295,7 @@ def fill_matching_data():
         for macro in macros_config:
         # Dynamically update the session state
             st.session_state[macro.lower()] = newest_same_name_df[macro.lower() ]
-# 10. Define initializer for simple objects/ not from gsheet
+# 10. Define initializer for simple objects/ not from supabase
 def simple_initializer(name:str, initial_value):
     if name not in st.session_state:
         st.session_state[name] = initial_value
@@ -337,7 +337,6 @@ def combined_progress_bar(filtered_food_sum):
             y_label = f"{config['emoji']} {macro}<br>{number_display_cur:.0f}/{number_display_max:.0f}"
 
         # Append dictionaries (rows) to our master list
-        # Notice we combine the macro name and type to ensure unique colors
         all_data.extend([
             {"Shelf": y_label, "Value": bar1,      "Type": f"{macro} Current"},
             {"Shelf": y_label, "Value": bar2,      "Type": f"{macro} Projected"},
@@ -400,7 +399,8 @@ def food_input_dialog():
         label="Date & Time", 
         key="datetime", 
         value=st.session_state["datetime"],
-        on_change=sync_datetime_to_split_keys 
+        on_change=sync_datetime_to_split_keys,
+        label_visibility = "collapsed"
     )
     # 2. Mobile-Friendly Macro Inputs & Individual Bars
     # Calculate the sum of food already eaten today
