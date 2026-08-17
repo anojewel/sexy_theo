@@ -37,7 +37,10 @@
 # Day 14:
 # Mobile ui restricts one element on 1 row, need UI overhaul
 # Uses st.dialog and popovers and st.segment thing for single row butotns.
-# Bugfixing the save stuff and the data not talking.
+# Bugfixing the save stuff 
+# Day 15 Plan:
+# Change save button/main database table into pillbox per item mode
+# Change date and time input into one single datetime column
 ### IMPORTS ###
 import streamlit as st
 import datetime 
@@ -276,13 +279,6 @@ def figure_progress_bar(
         hovertemplate=None     
     )
     return fig
-# 8. Define a number display counter
-def progressive_number_display(total, added, max):
-    if added == 0:
-        text = f"{total}/{max}"
-    else:
-        text = f"{total + added}/{max}"
-    return text
 # 9. (Name Matcher) Fills key values with most recent past data with the same name
 def fill_matching_data():
     # Create filtered df with the same name as the search bar
@@ -401,9 +397,6 @@ def food_input_dialog():
     )
     col_date.date_input("Date", key="date", value=st.session_state["date"])
     col_time.time_input("Time", key="time" , value=st.session_state["time"])
-
-    st.divider()
-
     # 2. Mobile-Friendly Macro Inputs & Individual Bars
     # Calculate the sum of food already eaten today
     filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
@@ -412,25 +405,20 @@ def food_input_dialog():
     for macro, config in macros_config.items():
         macro_lower = macro.lower()
         step_value = 50 if macro == "Calories" else 1
-        
+
+        # B. Define the variables
+        current_val = filtered_food_sum[macro_lower]
+        projected_val = st.session_state[macro_lower]
+        max_val = st.session_state[config["max_key"]]
+
         # A. The Number Input (Occupies 1 full row)
         st.number_input(
-            f"{config['emoji']} {macro} ({'kcal' if macro == 'Calories' else 'g'})", 
+            label = f"{config['emoji']} {macro} ({'kcal' if macro == 'Calories' else 'g'})" + f"{number_if_overflow(current_val, projected_val, max_val)}" , 
             min_value=0, 
             step=step_value, 
             key=macro_lower
         )
         
-        # B. Define the variables for your old function
-        current_val = filtered_food_sum[macro_lower]
-        projected_val = st.session_state[macro_lower]
-        max_val = st.session_state[config["max_key"]]
-        
-        # C. The Old Caption Text (Occupies 1 full row)
-        if current_val + projected_val > max_val:
-            st.caption(f":red[{current_val:.0f}/{max_val:.0f} | + {projected_val:.0f} ({(current_val + projected_val - max_val) / max_val * 100:.0f}% Overflow)]")
-        else:
-            st.caption(f"{current_val:.0f}/{max_val:.0f} | + {projected_val:.0f}")
 
         # D. The Original Progress Bar (Occupies 1 full row)
         st.plotly_chart(
@@ -445,11 +433,6 @@ def food_input_dialog():
             use_container_width=True,
             config={'displayModeBar': False}
         )
-        
-        # Add a tiny bit of vertical spacing between each macro group
-        st.markdown("<br>", unsafe_allow_html=True) 
-    
-    st.divider()
     
     # 3. Bottom Row: Action buttons
     col_log, col_ingredient = st.columns(2)
@@ -486,6 +469,13 @@ def open_set_max():
         disabled = any(st.session_state[x["max_key"]] == 0 for x in macros_config.values())
         )
 
+# 15. The number display for the input field
+def number_if_overflow(current_val, projected_val, max_val):
+    if current_val + projected_val > max_val:
+        return f": :red[{current_val:.0f}/{max_val:.0f} | + {(current_val + projected_val - max_val):.0f} ({(current_val + projected_val - max_val) / max_val * 100:.0f}% Overflow)]"
+    else:
+        return f": {current_val:.0f}/{max_val:.0f} | + {projected_val:.0f}"
+    
 ### END DEFINITIONS ###
 
 ### BEGIN BACKEND CONNECTION ###
