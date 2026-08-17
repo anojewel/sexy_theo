@@ -466,10 +466,10 @@ def handle_save_segment():
     if action == "💾 Save":
         save_changes()
         # Non-blocking temporary green text!
-        st.toast("✅ Saved successfully!", icon="✅") 
+        st.toast("Saved successfully!", icon="✅") 
     elif action == "🗑️ Discard":
         delete_changes()
-        st.toast("🗑️ Changes discarded.", icon="🗑️")
+        st.toast("Changes discarded.", icon="🗑️")
         
     # Crucial step: Reset the state to None so the button visually "un-clicks"
     st.session_state.save_action_segment = None
