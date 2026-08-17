@@ -36,6 +36,8 @@
 # Deploy for the first time 
 # Day 14:
 # Mobile ui restricts one element on 1 row, need UI overhaul
+# Uses st.dialog and popovers and st.segment thing for single row butotns.
+# Bugfixing the save stuff and the data not talking.
 ### IMPORTS ###
 import streamlit as st
 import datetime 
@@ -398,7 +400,7 @@ def food_input_dialog():
         on_change=fill_matching_data,
     )
     col_date.date_input("Date", key="date", value=st.session_state["date"])
-    col_time.time_input("Time", key="time", value=st.session_state["time"])
+    col_time.time_input("Time", key="time" , value=st.session_state["time"])
 
     st.divider()
 
@@ -529,22 +531,17 @@ with st.sidebar:
          open_set_max()
 ### END SIDEBAR UI ###
 ### BEGIN UI ###
-# 1. Display the bars in the first row
-filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
-st.plotly_chart(
-    combined_progress_bar(filtered_food_sum), 
-    use_container_width=True, 
-    config={'displayModeBar': False}
-)
-date_column, save_changes_column = st.columns([2,1])
-# 1.2 Date Picker and Variable Assignment
-date_column.date_input(label="Date", 
+# 1. Create date selector
+st.date_input(label="Select date to view", 
     value=datetime.date.today(), 
-    label_visibility="collapsed", key = "date_filter_value")
-# 2. Second Row: The main date table
-filtered_df = st.session_state.food_df[st.session_state.food_df["date"] == st.session_state.date_filter_value].copy()
+    key = "date_filter_value")
+# ACtually create the filtered database based on the selected data
+st.session_state.filtered_df = st.session_state.food_df[st.session_state.food_df["date"] == st.session_state.date_filter_value].copy()
 
-filtered_df = st.data_editor(data = filtered_df, 
+# 2. Display the plotly bars
+plotly_container = st.container()
+# 3. The main date table
+filtered_df_local = st.session_state.filtered_df = st.data_editor(data = st.session_state.filtered_df, 
              hide_index=True, 
              width="stretch", 
              height=280, 
@@ -560,6 +557,15 @@ filtered_df = st.data_editor(data = filtered_df,
         "fat": st.column_config.NumberColumn(format="%.0f", label = 'Fat', width ="small"),
         "time": st.column_config.TimeColumn(format="HH:mm", label = 'Time', width ="small")
     }) 
+
+# have to put the caluclations of plotly bars here so it is live
+with plotly_container:
+    filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
+    st.plotly_chart(
+        combined_progress_bar(filtered_food_sum), 
+        use_container_width=True, 
+        config={'displayModeBar': False}
+    )
 # Take a snapshot of the table TO SESSION STATE so the Save button can find the IDs later!
 #  Check if there are any new rows OR any edits
 has_new_rows = st.session_state.food_df["id"].isna().any()
