@@ -52,7 +52,7 @@
 # Day 17
 # Change to date range picker and their functions
 # Change food data filtering
-# Added a average view mode and day view mode
+# Added a average view mode and day view mode THIS IS UNEXPECTED SO MUCH WORK
 # Plans:
 # update the name matcher using FUZZY SEARCH DIFFLIB
 # implement a week button inside food_card_day that ends with week 2 and so on, use a pillbox 
@@ -215,7 +215,7 @@ def log_food():
         # Rerun the whoel script
         #Clear cache
         st.cache_data.clear()
-        load_food_data(st.session_state.selected_user)
+        st.session_state.food_df = load_food_data(st.session_state.selected_user)
         
     else:
         st.error("Please fill in all fields with valid values.")
@@ -584,7 +584,7 @@ def single_food_card(row):
         macro_string = macro_string + f"{config['emoji']} {row[macro.lower()]} {config['unit']} "
     # Draw the cards:
     card_button = st.button(
-        label = f"**{row['food_name']}** || {macro_string}" if row['eat_status'] == True else f":grey[**{row['food_name']}** || {macro_string}]",
+        label = f"**{row['food_name']}** || {macro_string}|| {row['time']:%H:%M}" if row['eat_status'] == True else f":grey[**{row['time']:%H:%M}]",
         use_container_width= True,
         key = f"food_card_button_{str(row['id'])}" # Adds a key id based on the row number
     )
@@ -640,7 +640,7 @@ def save_edit(row):
         # MANUALLY clear the new UI-only datetime widget
         st.session_state["datetime"] = datetime.datetime.now(LOCAL_TZ)
         st.cache_data.clear()
-        load_food_data(st.session_state.selected_user)
+        st.session_state.food_df = load_food_data(st.session_state.selected_user)
     else:
         st.error("Please fill in all fields with valid values.")
     # CLEAR CACHE
@@ -651,7 +651,7 @@ def delete_selected_food(row):
     conn.table("food_data").delete().eq('id',int(row['id'])).execute()
     #Clear cache
     st.cache_data.clear()
-    load_food_data(st.session_state.selected_user)
+    st.session_state.food_df = load_food_data(st.session_state.selected_user)
 # 21. DONUT VIEW MODE FORCE SELECT
 def donut_store_memory():
     if st.session_state.donut_view == 'Day':
