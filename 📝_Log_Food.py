@@ -46,9 +46,13 @@
 # Day 15
 # Change save button/main database table into pillbox per item mode
 # Added eat status and its functions
-# Day 16 p
+# Day 16 
 # added all the buttons and their functions correctly
 # save delete eat status functions aare added and bugfixxed
+# Day 17
+# Change to date range picker and their functions
+# Change food data filtering
+# Added a average view mode and day view mode
 # Plans:
 # update the name matcher using FUZZY SEARCH DIFFLIB
 # implement a week button inside food_card_day that ends with week 2 and so on, use a pillbox 
@@ -65,6 +69,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from st_supabase_connection import SupabaseConnection
 from streamlit_extras.floating_button import floating_button
+from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
 ### BEGIN CONFIGURATION ###
 st.set_page_config(
@@ -192,19 +197,14 @@ def log_food():
         payload={
             config["norm"]:st.session_state[config["norm"]] for config in inputs_config.values()
         }
-        # INsert Empty id values
-        payload["id"] = None
         # Mark the username into the payload
         payload["username"] = st.session_state.selected_user
         # Mark the eating status based on before/after
         payload["eat_status"] = (True if st.session_state.datetime.replace(tzinfo = LOCAL_TZ) <= datetime.datetime.now(LOCAL_TZ) else False)
-        # Append data from keys to the lowest row in food_df
-        st.session_state.food_df.loc[len(st.session_state.food_df)] = [x for x in payload.values()]
         # Change the datetime value in the payload (AFTER PUSHING TO FOOD DF) to strinsg
         payload["date"] = payload["date"].isoformat()
         payload["time"] = payload["time"].isoformat()
         # Delete the id column before pushing to supabase
-        del payload["id"]
         # PUSH THE DATA TO SUPABASE
         conn.table("food_data").insert(payload).execute()
         # Clear input fields after adding ingredient
@@ -212,10 +212,14 @@ def log_food():
                 st.session_state[x["norm"]] = x["initial"]
         # MANUALLY clear the new UI-only datetime widget
         st.session_state["datetime"] = datetime.datetime.now(LOCAL_TZ)
+        # Rerun the whoel script
+        #Clear cache
+        st.cache_data.clear()
+        load_food_data(st.session_state.selected_user)
+        
     else:
         st.error("Please fill in all fields with valid values.")
-    #Clear cache
-    st.cache_data.clear()
+    
 
 # 4. Saving max button action definition:
 def save_max():
@@ -339,16 +343,17 @@ def food_input_dialog():
         value=st.session_state["datetime"],
         label_visibility = "collapsed",
     )
-    # Calculate the sum of the filtered df
-    filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
 
+    # Create an pd series of the same day as the date chosen in the keys
+    same_date_df = st.session_state.food_df[st.session_state.food_df['date']==st.session_state.datetime.date()]
+    sum_same_date = same_date_df[[macro.lower() for macro in macros_config]].sum()
     # Loop through the dictionary WITHOUT creating st.columns
     for macro, config in macros_config.items():
         macro_lower = macro.lower()
         step_value = 50.0 if macro == "Calories" else 5.0
 
         # B. Define the variables
-        current_val = filtered_food_sum[macro_lower]
+        current_val = sum_same_date[macro_lower]
         projected_val = st.session_state[macro_lower]
         max_val = st.session_state[config["max_key"]]
 
@@ -410,7 +415,14 @@ def sync_datetime_to_split_keys(datetime_key:str, date_key:str, time_key:str):
         st.session_state[date_key] = st.session_state[datetime_key].date()
         st.session_state[time_key] = st.session_state[datetime_key].time()
 # 13. Donut Charts
-def donut_progress_bars(filtered_food_sum):
+def donut_progress_bars(for_plot_df):
+    sum_series = for_plot_df[[macro.lower() for macro in macros_config]].sum()
+    eaten_sum_series = for_plot_df[for_plot_df['eat_status']==True][[macro.lower() for macro in macros_config]].sum()
+    not_eaten_sum_series = for_plot_df[for_plot_df['eat_status']==False][[macro.lower() for macro in macros_config]].sum()
+    #If the selected range has zero food will return 0 sum and 0 length.
+    # want 0 as output when this happens so take 1 as the denominator instead
+    daily_average_series = sum_series/max(1,len(for_plot_df['date'].unique()))
+    
     # Plotly function that make a single element room, that can put four plots in it
     fig = make_subplots(
         rows = 1,
@@ -420,9 +432,13 @@ def donut_progress_bars(filtered_food_sum):
     # The subplots have numbers assigned for each row, we need to assign them with enumerate.
     for col_index, (macro, config) in enumerate(macros_config.items(), start = 1):
         ### DATA PROCESSING ###
-        water = filtered_food_sum[macro.lower()] # This is the water
-        oil = st.session_state[macro.lower()] # This is the oil
-        bucket = st.session_state[config["max_key"]] # This is the bucket size
+        if st.session_state.donut_view == 'Day' or st.session_state.donut_memory == 'Day':
+            water = eaten_sum_series[macro.lower()] 
+            oil = not_eaten_sum_series[macro.lower()] 
+        elif st.session_state.donut_view == 'Average' or st.session_state.donut_memory == 'Average':
+            water = daily_average_series[macro.lower()]
+            oil = 0
+        bucket = st.session_state[config["max_key"]] 
         oil_bucket = max(bucket - water, 0) # The non-water volume inside the bucket is the oil_bucket
         water_spill = max(0, water - bucket) 
         oil_spill = max(0, oil - oil_bucket) 
@@ -454,13 +470,14 @@ def donut_progress_bars(filtered_food_sum):
         )
     #  Add the centered text
         donut_logo = f"{config['emoji']}"
-        donut_numbers =  f"{macro} <br> {(oil+water):.0f}/{bucket:.0f}"
+        donut_text =  f"{macro}"
+        donut_numbers = f'{(oil+water):.0f}/{bucket:.0f}'
         x_pos = (col_index - 1) * 0.261 + 0.109
         
         fig.add_annotation(
             text=donut_logo,
             x=x_pos,
-            y=0.5, 
+            y=0.55, 
             xref="paper",
             yref="paper",
             xanchor="center",
@@ -469,9 +486,9 @@ def donut_progress_bars(filtered_food_sum):
             font=dict(size=20)
         )
         fig.add_annotation(
-            text=donut_numbers,
+            text=donut_text,
             x=x_pos,
-            y=0.1, 
+            y=1.04, 
             xref="paper",
             yref="paper",
             xanchor="center",
@@ -479,28 +496,28 @@ def donut_progress_bars(filtered_food_sum):
             showarrow=False,
             font=dict(size=14)
         )
+        fig.add_annotation(
+            text=donut_numbers,
+            x=x_pos,
+            y=0.35,
+            xref="paper",
+            yref="paper",
+            xanchor="center",
+            yanchor="middle",
+            showarrow=False,
+            font=dict(size=11)
+        )
 
     #  Clean up the background and margins outside the loop
     fig.update_layout(
         showlegend=False,
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(255,255,255,0.02)",
-        height=180,
+        height=130,
         margin=dict(l=0, r=0, t=10, b=0)
     )
     
     return fig
-# 14. (FOOD CARD TIME RNAGE) Time range selector
-def card_view_selector():
-    st.segmented_control(
-        label = "",
-        label_visibility = "collapsed",
-        options = ["Plan", "Current"],
-        width = "stretch",
-        selection_mode= "single",
-        key = "card_view_mode",
-        default = "Current"
-    )
 # 15. The editing ui    
 @st.dialog("✏️ Edit Log")
 def open_food_editor(row):
@@ -560,64 +577,44 @@ def open_food_editor(row):
 
         # function that changes the eatn value of said id to false
     
-    
-# 16. (FOOD CARD DISPLAY)
-def food_card_day(date, food_df):
-    # Create a date display button
-    date_select = st.button(
-        label = date.strftime("%d %B %Y"),
-        type = "tertiary",
-        use_container_width= True
+# 16. (Single food card)
+def single_food_card(row):
+    macro_string = ""
+    for macro, config in macros_config.items():
+        macro_string = macro_string + f"{config['emoji']} {row[macro.lower()]} {config['unit']} "
+    # Draw the cards:
+    card_button = st.button(
+        label = f"**{row['food_name']}** || {macro_string}" if row['eat_status'] == True else f":grey[**{row['food_name']}** || {macro_string}]",
+        use_container_width= True,
+        key = f"food_card_button_{str(row['id'])}" # Adds a key id based on the row number
     )
-    if date_select:
-        # Assign this date as the donut value
-        st.session_state.date_filter_value = date 
-    # Filter a df with the same date:
-    same_date_df = food_df[food_df["date"] == date][[x["norm"] for x in inputs_config.values()] + ["id", "eat_status"]]
+    if card_button:
+        open_food_editor(row)
+    
+# 17. DRAW FOOD CARDS IN ONE DAY
+def draw_cards_day(date_input,food_df):
+    # Filter out data with the same date
+    same_date_df = food_df[food_df['date']==date_input] 
+    # Draw button for ASSIGN DATE RANGE TO PLOT
+    date_button = st.button(
+        label = f"{date_input:%d %B %Y}",
+        type = 'tertiary',
+        use_container_width = True,
+        on_click = donut_view_to_date
+    )
+    # ASSIGN DATE RANGE TO PLOT function
+    if date_button:
+        st.session_state.for_plot_df = same_date_df
+        st.session_state.selected_date = date_input
+        st.rerun()
+    # Draw all the cards within that same day:
     for index, row in same_date_df.iterrows():
-        # String for button labels
-        macro_string = ""
-        for macro, config in macros_config.items():
-            macro_string = macro_string + f"{config['emoji']} {row[macro.lower()]} {config['unit']} "
-        # Draw the cards:
-        card_button = st.button(
-            label = f"**{row['food_name']}** || {macro_string}" if row['eat_status'] == True else f":grey[**{row['food_name']}** || {macro_string}]",
-            use_container_width= True,
-            key = f"food_card_button_{index}" # Adds a key id based on the row number
-        )
-        if card_button:
-            open_food_editor(row)
-# 17. This action displays the days of the cards depends on the mode selected
-def display_multiple_days(card_view_mode):
-    today = datetime.datetime.now(LOCAL_TZ).date()
-    start_date = today - datetime.timedelta(days=7)
-    
-    # Filter a df of something that happens after 7 days ago
-    week_df = st.session_state.food_df[st.session_state.food_df["date"] >= start_date]
-    # Filter a df of those that has eat status
-    current_week_df = week_df[week_df['eat_status'] == True]
-    
-    #  Find the furthest date in the future (fallback to today if no future items exist)
-    if not st.session_state.food_df.empty:
-        max_date = max(today, st.session_state.food_df["date"].max())
-    else:
-        max_date = today
-        
-    # Calculate exactly how many days the loop needs to run
-    total_days = (max_date - start_date).days + 1
-    
-    # Use the dynamic range, and start counting backward from the max_date
-    if card_view_mode == "Plan":
-        for i in range(total_days):
-            display_date = max_date - datetime.timedelta(days=i)
-            food_card_day(display_date, week_df)
-            
-    elif card_view_mode == "Current":
-        for i in range(total_days):
-            display_date = max_date - datetime.timedelta(days=i)
-            food_card_day(display_date, current_week_df)
-            ### END DEFINITIONS ###
-# 18.  This changes the pills into button
+        single_food_card(row)
+# 18. DRAW DAYS OF A CERTAIN RANGE
+def draw_date_range(date_range,food_df):
+    filtered_dates = food_df[food_df['date'].between(date_range[0],date_range[1])]['date'].unique()
+    for single_date in sorted(filtered_dates, reverse=True):
+        draw_cards_day(single_date, food_df)
 # 19. Function that pushes edit into the database
 def save_edit(row):
     sync_datetime_to_split_keys('edit_datetime','edit_date','edit_time')
@@ -628,19 +625,13 @@ def save_edit(row):
         payload={
             config["norm"]:st.session_state['edit_'+ config["norm"]] for config in inputs_config.values()
         }
-        # Insert Id values as the selected row id
-        payload["id"] = int(row['id'])
         # Mark the username into the payload
         payload["username"] = st.session_state.selected_user
         # Mark the eating status based on the value in the pill button
         payload["eat_status"] = st.session_state.edit_eat_status
-        # Update the data in food_df
-        st.session_state.food_df[st.session_state.food_df['id'] == row['id']] = [x for x in payload.values()]
         # Change the datetime value in the payload (AFTER PUSHING TO FOOD DF) to strinsg
         payload["date"] = payload["date"].isoformat()
         payload["time"] = payload["time"].isoformat()
-        # conn doesnt like id columns
-        del payload['id']
         # PUSH THE DATA TO SUPABASE
         conn.table("food_data").update(payload).eq('id',int(row['id'])).execute()
         # Clear input fields after adding ingredient
@@ -648,18 +639,49 @@ def save_edit(row):
                 st.session_state[x["norm"]] = x["initial"]
         # MANUALLY clear the new UI-only datetime widget
         st.session_state["datetime"] = datetime.datetime.now(LOCAL_TZ)
+        st.cache_data.clear()
+        load_food_data(st.session_state.selected_user)
     else:
         st.error("Please fill in all fields with valid values.")
     # CLEAR CACHE
-    st.cache_data.clear()
-# 20. Function that pushes
+    
+# 20. Function that delete the desired row
 def delete_selected_food(row):
-    # Delete the data in food_df by recreating food_df without the desired row
-    st.session_state.food_df = st.session_state.food_df[st.session_state.food_df['id']!=row['id']]
-    # Delete the data in the supabase
+   # Delete the data in the supabase
     conn.table("food_data").delete().eq('id',int(row['id'])).execute()
     #Clear cache
     st.cache_data.clear()
+    load_food_data(st.session_state.selected_user)
+# 21. DONUT VIEW MODE FORCE SELECT
+def donut_store_memory():
+    if st.session_state.donut_view == 'Day':
+        st.session_state.donut_memory = 'Day'
+    elif st.session_state.donut_view == 'Average':
+        st.session_state.donut_memory = 'Average'
+# 22 CHANGE for donut df when average is clicked
+def segment_donut_change(date_range,food_df):
+    if st.session_state.donut_view == 'Average' or st.session_state.donut_memory == 'Average':
+        if len(date_range) == 2:
+            st.session_state.for_plot_df = food_df[food_df['date'].between(date_range[0],date_range[1])]
+    elif st.session_state.donut_view == 'Day' or st.session_state.donut_memory == 'Day':
+        same_date_df = food_df[food_df['date']==st.session_state.selected_date] 
+        st.session_state.for_plot_df = same_date_df
+        
+# 24. Action that changes donut_view key to 'Date'
+def donut_view_to_date():
+    st.session_state.donut_view = 'Day'
+# 25. Label for the donut currently showing
+def donut_label():
+    if st.session_state.selected_date == datetime.datetime.now(LOCAL_TZ).date():
+        date_label = 'today.'
+    elif st.session_state.selected_date == datetime.datetime.now(LOCAL_TZ).date()-datetime.timedelta(days=1):
+        date_label = 'yesterday.'
+    else:
+        date_label = f"{st.session_state.selected_date:%d %B %Y}."
+    if st.session_state.donut_view == 'Average' or st.session_state.donut_memory == 'Average':
+        return f"Showing daily average from {st.session_state.date_range[0]:%d %B %Y} ~ {st.session_state.date_range[1]:%d %B %Y}."
+    elif st.session_state.donut_view == 'Day' or st.session_state.donut_memory == 'Day':
+        return f"Showing data for {date_label}"
 ### BEGIN BACKEND CONNECTION ###
 conn = st.connection("supabase", type=SupabaseConnection)
 ### END BACKEND CONNECTION ###
@@ -674,7 +696,7 @@ for x in inputs_config.values():
     simple_initializer(name = x["norm"], initial_value = x["initial"])
 # 4. (Max Values) Initialize macro targets into a dictionary from supabase with the most recent value
 simple_initializer(name = "targets_dict_recent", initial_value = load_macro_goals(st.session_state.selected_user))
-# 6. (Max Values)Initialize max value keys in session_state
+# 6. (Max Values)Initialize max value keys in session_stat  e
 for x,y in st.session_state.targets_dict_recent.items():
     simple_initializer(x,y)
 # 7. (Log Food) Initialize datetime, used for the input buttons
@@ -682,34 +704,31 @@ simple_initializer(
     name="datetime", 
     initial_value=datetime.datetime.now(LOCAL_TZ)
 )
-# 8. (FOOD CARD TIME RANGE)
+# 8. Initialize the data used for the plot called 'for_plot_df'
 simple_initializer(
-    name = "card_view_mode",
-    initial_value= "Current"
+    name ='for_plot_df', 
+    initial_value = st.session_state.food_df[st.session_state.food_df['date']==datetime.datetime.now(LOCAL_TZ).date()]
 )
-# 9. Date filter for the donuts initializer
-simple_initializer(
-    name = "date_filter_value",
-    initial_value = datetime.datetime.now(LOCAL_TZ).date()
-)
-# 10. Initialize FILTERED DF, this df is FOR THE DONUTS
-simple_initializer(
-    name = "filtered_df",
-    initial_value = st.session_state.food_df[st.session_state.food_df["date"] == st.session_state.date_filter_value].copy()
-)
-# 11. Initialize pill key
+# 9. Initialize pill key
 simple_initializer(
     name = 'pill_key',
     initial_value = None
 )
-# 12. Initialize edit values:
+# 10. Initialize edit values:
      # Input fields, excluding datetime but with date time
 for x in inputs_config.values():
     simple_initializer(name = x["norm"], initial_value = x["initial"])
-
-
+# 11. This is for the segment control at the top cannot have a None value
+simple_initializer('donut_view_forcer', 'Day')
+# 12. This is to initialize the donut_view so the UI uses an existing data
+simple_initializer('donut_view', 'Day')
+# 13. Initialize date_range
+simple_initializer('date_range',(datetime.datetime.now(LOCAL_TZ).date()-datetime.timedelta(days=7),datetime.datetime.now(LOCAL_TZ).date())) 
 ### END INITIALIZATION ###
-
+# 14. variable for the last selected date
+simple_initializer('selected_date', datetime.datetime.now(LOCAL_TZ).date())
+# 15. Donut memory to allow none
+simple_initializer('donut_memory', 'Day')
 ### BEGIN SIDEBAR UI ###
 # 1. username selector
 with st.sidebar:
@@ -725,22 +744,37 @@ with st.sidebar:
 ### END SIDEBAR UI ###
 
 ### BEGIN MAIN UI ###
-# 1. Draw the plotly bars
-# Match the filtered_df with the date_filter_value everytime
-st.session_state.filtered_df = st.session_state.food_df[st.session_state.food_df["date"] == st.session_state.date_filter_value].copy()
-filtered_food_sum = st.session_state.filtered_df[[x.lower() for x in macros_config]].sum()
-plotly_container = st.container()
-with plotly_container:
-    
-    st.plotly_chart(
-        donut_progress_bars(filtered_food_sum), 
-        use_container_width=True, 
-        config={'displayModeBar': False}
+# 1. Segmented Control for donut view
+donut_view_mode = st.segmented_control(
+    label = "",
+    label_visibility = 'collapsed',
+    options = ['Day', 'Average'],
+    key = 'donut_view',
+    width = 'stretch',
+    selection_mode = 'single',
+    on_change = donut_store_memory,
+    default = 'Day'
+)
+# FORCE THE USER TO ALWAYS HAVE A CHOICE
+# 2.1 The for_plot_df use date range when turned to average
+segment_donut_change(st.session_state.date_range,st.session_state.food_df)
+# 2.2 The for_plot_df use the last saved date when turned to date
+# 2. Draw the plotly bars
+st.plotly_chart(
+    donut_progress_bars(st.session_state.for_plot_df), 
+    use_container_width=True, 
+    key="main_donut_chart",
+    config={'displayModeBar': False,}
+)
+# 3. Draw Date range selector
+selected_date_range = date_range_picker(
+    title = donut_label(),
+    key = "date_range",
+    default_start = (datetime.datetime.now(LOCAL_TZ).date()-datetime.timedelta(days=7)),
+    default_end = datetime.datetime.now(LOCAL_TZ).date()  
     )
-# 3. Draw Segmented selector for filtering day,week,month
-card_view_selector()
 # 4. Draw food cards:
-display_multiple_days(st.session_state.card_view_mode)
+draw_date_range(st.session_state.date_range, st.session_state.food_df)
 ### END MAIN UI ###
 
 ### INPUT FIELD UI ###
