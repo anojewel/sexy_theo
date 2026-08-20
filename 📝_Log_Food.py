@@ -55,14 +55,11 @@
 # Added a average view mode and day view mode THIS IS UNEXPECTED SO MUCH WORK
 # Plans:
 # update the name matcher using FUZZY SEARCH DIFFLIB
-# implement a week button inside food_card_day that ends with week 2 and so on, use a pillbox 
-# Pressing the week button should change the donut to display that week's average
 # use css to make the donuts floating?????
 # specialized input streamlit extras search?????
 # Persist account selection per last use? Is it possible
 # Bugs:
-# Edit dialogues open and only show the data of the data first pressed
-# Changing eating status doesnt show directly in the food cards
+#
 ### IMPORTS ###
 import streamlit as st
 import datetime 
@@ -388,10 +385,10 @@ def food_input_dialog():
     col_log, col_ingredient = st.columns(2)
     
     # Use on_click=log_food so the state clears BEFORE widgets instantiate on the next run!
-    if col_log.button("Log Food", icon = "➕", on_click=log_food, use_container_width=True, type="primary"):
+    if col_log.button("Log Food", icon = "➕", on_click=log_food, width = 'stretch' , type="primary"):
         st.rerun() # Closes the dialog
         
-    col_ingredient.button("Ingredient Mode", use_container_width=True, icon = "🥣")
+    col_ingredient.button("Ingredient Mode", width='stretch', icon = "🥣")
 # 10 Dialog for setting maximum target
 @st.dialog("Set Maximum Target")
 def open_set_max():
@@ -463,7 +460,7 @@ def donut_progress_bars(for_plot_df):
                     config["color_overflow2"], 
                     "rgba(255,255,255,0.05)" # Color for empty air
                 ],
-                hole = 0.65, #IMPORTANT DONUT HOLE
+                hole = 0.62, #IMPORTANT DONUT HOLE
                 textinfo = "none",
                 hoverinfo = "skip",
                 sort = False,
@@ -481,7 +478,7 @@ def donut_progress_bars(for_plot_df):
         fig.add_annotation(
             text=donut_logo,
             x=x_pos,
-            y=0.55, 
+            y=0.58, 
             xref="paper",
             yref="paper",
             xanchor="center",
@@ -589,7 +586,7 @@ def single_food_card(row):
     # Draw the cards:
     card_button = st.button(
         label = f"**{row['food_name']}**    || {macro_string} ||     {row['time']:%H:%M}" if row['eat_status'] == True else f":grey[**{row['food_name']}**    || {macro_string}||    {row['time']:%H:%M}]",
-        use_container_width= True,
+        width= 'stretch',
         key = f"food_card_button_{str(row['id'])}" # Adds a key id based on the row number
     )
     if card_button:
@@ -610,7 +607,7 @@ def draw_cards_day(date_input,food_df):
     date_button = st.button(
         label = f"{date_input:%d %B %Y}",
         type = 'tertiary',
-        use_container_width = True,
+        width = 'stretch',
         on_click = donut_view_to_date
     )
     # ASSIGN DATE RANGE TO PLOT function
@@ -775,7 +772,7 @@ segment_donut_change(st.session_state.date_range,st.session_state.food_df)
 # 2. Draw the plotly bars
 st.plotly_chart(
     donut_progress_bars(st.session_state.for_plot_df), 
-    use_container_width=True, 
+    width='stretch', 
     key="main_donut_chart",
     config={'displayModeBar': False,}
 )
