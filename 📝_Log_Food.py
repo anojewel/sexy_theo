@@ -60,6 +60,9 @@
 # use css to make the donuts floating?????
 # specialized input streamlit extras search?????
 # Persist account selection per last use? Is it possible
+# Bugs:
+# Edit dialogues open and only show the data of the data first pressed
+# Changing eating status doesnt show directly in the food cards
 ### IMPORTS ###
 import streamlit as st
 import datetime 
@@ -463,7 +466,8 @@ def donut_progress_bars(for_plot_df):
                 hole = 0.65, #IMPORTANT DONUT HOLE
                 textinfo = "none",
                 hoverinfo = "skip",
-                sort = False
+                sort = False,
+                direction = 'clockwise',
             ),
             row = 1,
             col = col_index,
@@ -521,7 +525,7 @@ def donut_progress_bars(for_plot_df):
 # 15. The editing ui    
 @st.dialog("✏️ Edit Log")
 def open_food_editor(row):
-    #Initialize edit_eat_status
+    #Initialize edit_eat_status if it doesnt exist
     simple_initializer(
         name = 'edit_eat_status',
         initial_value = row['eat_status']
@@ -554,12 +558,17 @@ def open_food_editor(row):
             format="%.2f",
             value = row[macro.lower()]
         )
-    # 4. Draw buttons for saving and deleting, 
-    mark_as_eaten_label = "⏳:grey[Not Eaten]" if st.session_state.edit_eat_status == False else "✅ Eaten"
+    # 4. Draw toggle and buttons for saving/deleting
+    st.toggle(
+        label="✅ Eaten", 
+        key="edit_eat_status"
+    )
+    
+    # 5. Draw buttons for saving and deleting, 
     st.pills(
-        label = "",
+        label = "", 
         label_visibility= "collapsed",
-        options = ["💾 Save", "❌ Delete", mark_as_eaten_label],
+        options = ["💾 Save", "❌ Delete"],
         key = "pill_key"
     )
     clicked_pill = st.session_state.pill_key
@@ -569,11 +578,6 @@ def open_food_editor(row):
     elif clicked_pill == "❌ Delete":
         delete_selected_food(row)
         st.rerun()
-    elif clicked_pill == "⏳:grey[Not Eaten]":
-        st.session_state.edit_eat_status = True
-        # reset the chosen pill so it functions as a buttonf
-    elif clicked_pill == "✅ Eaten":
-        st.session_state.edit_eat_status = False
 
         # function that changes the eatn value of said id to false
     
@@ -584,11 +588,18 @@ def single_food_card(row):
         macro_string = macro_string + f"{config['emoji']} {row[macro.lower()]} {config['unit']} "
     # Draw the cards:
     card_button = st.button(
-        label = f"**{row['food_name']}** || {macro_string}|| {row['time']:%H:%M}" if row['eat_status'] == True else f":grey[**{row['food_name']}** || {macro_string}|| {row['time']:%H:%M}]",
+        label = f"**{row['food_name']}**    || {macro_string} ||     {row['time']:%H:%M}" if row['eat_status'] == True else f":grey[**{row['food_name']}**    || {macro_string}||    {row['time']:%H:%M}]",
         use_container_width= True,
         key = f"food_card_button_{str(row['id'])}" # Adds a key id based on the row number
     )
     if card_button:
+        # Change the edit keys in the session state to the buttons in question
+        input_list = [x['norm'] for x in inputs_config.values()] +['eat_status']
+        for input_name in input_list:
+            st.session_state['edit_'+ input_name] = row[input_name]
+        # Assign the datetime because its weid:
+        combine_datetime = datetime.datetime.combine(row['date'],row['time'])
+        st.session_state['edit_datetime'] = combine_datetime 
         open_food_editor(row)
     
 # 17. DRAW FOOD CARDS IN ONE DAY
@@ -639,7 +650,9 @@ def save_edit(row):
                 st.session_state[x["norm"]] = x["initial"]
         # MANUALLY clear the new UI-only datetime widget
         st.session_state["datetime"] = datetime.datetime.now(LOCAL_TZ)
+        # clear the cache
         st.cache_data.clear()
+        # Reload the food df with supabase
         st.session_state.food_df = load_food_data(st.session_state.selected_user)
     else:
         st.error("Please fill in all fields with valid values.")
