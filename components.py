@@ -59,9 +59,9 @@ def food_input_dialog():
             visuals.figure_progress_bar(
                 factor=current_val / max_val, 
                 projected_factor=projected_val / max_val, 
-                bar_color=f'rgba({config['rgb']},1)', 
-                projected_bar_color=f'rgba({config['rgb']},0.7)',
-                overflow_color=f'rgba({config['rgb']},0.4)',
+                bar_color=f'rgba({config['rgb']},0.85)', 
+                projected_bar_color=f'rgba({config['rgb']},0.6)',
+                overflow_color=f'rgba({config['rgb']},1)',
                 projected_overflow_color=f'rgba({config['rgb']},0.6)'
             ),
             width= "stretch",
