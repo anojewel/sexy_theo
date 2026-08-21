@@ -53,11 +53,14 @@
 # Change to date range picker and their functions
 # Change food data filtering
 # Added a average view mode and day view mode THIS IS UNEXPECTED SO MUCH WORK
+# Migrated google sheets data
+# Day 18
+# make close menu clears the session state variables
 # Plans:
 # update the name matcher using FUZZY SEARCH DIFFLIB
-# use css to make the donuts floating?????
 # specialized input streamlit extras search?????
-# Persist account selection per last use? Is it possible
+# utilize the persisting stuff
+# ingredient mode
 # Bugs:
 #
 ### IMPORTS ###
@@ -478,7 +481,7 @@ def donut_progress_bars(for_plot_df):
         fig.add_annotation(
             text=donut_logo,
             x=x_pos,
-            y=0.58, 
+            y=0.52, 
             xref="paper",
             yref="paper",
             xanchor="center",
@@ -489,7 +492,7 @@ def donut_progress_bars(for_plot_df):
         fig.add_annotation(
             text=donut_text,
             x=x_pos,
-            y=1.04, 
+            y=1.02, 
             xref="paper",
             yref="paper",
             xanchor="center",
@@ -500,7 +503,7 @@ def donut_progress_bars(for_plot_df):
         fig.add_annotation(
             text=donut_numbers,
             x=x_pos,
-            y=0.35,
+            y=0.39,
             xref="paper",
             yref="paper",
             xanchor="center",
@@ -582,10 +585,10 @@ def open_food_editor(row):
 def single_food_card(row):
     macro_string = ""
     for macro, config in macros_config.items():
-        macro_string = macro_string + f"{config['emoji']} {row[macro.lower()]} {config['unit']} "
+        macro_string = macro_string + f"{config['emoji']} {row[macro.lower()]} {config['unit']}"
     # Draw the cards:
     card_button = st.button(
-        label = f"**{row['food_name']}**    || {macro_string} ||     {row['time']:%H:%M}" if row['eat_status'] == True else f":grey[**{row['food_name']}**    || {macro_string}||    {row['time']:%H:%M}]",
+        label = f"**{row['food_name']}** ‎ ‎ {row['time']:%H:%M} \n\n {macro_string}" if row['eat_status'] == True else f":grey[**{row['food_name']}** ‎ ‎ {row['time']:%H:%M} \n{macro_string}]",
         width= 'stretch',
         key = f"food_card_button_{str(row['id'])}" # Adds a key id based on the row number
     )
@@ -692,6 +695,10 @@ def donut_label():
         return f"Showing daily average from {st.session_state.date_range[0]:%d %B %Y} ~ {st.session_state.date_range[1]:%d %B %Y}."
     elif st.session_state.donut_view == 'Day' or st.session_state.donut_memory == 'Day':
         return f"Showing data for {date_label}"
+# 26. Action that resets the input session_state variables
+def reset_input_field():
+    for x in inputs_config.values():
+        st.session_state[x['norm']] = x['initial']
 ### BEGIN BACKEND CONNECTION ###
 conn = st.connection("supabase", type=SupabaseConnection)
 ### END BACKEND CONNECTION ###
@@ -699,15 +706,17 @@ conn = st.connection("supabase", type=SupabaseConnection)
 ### BEGIN INITIALIZATION ###
 # 1. (User Select) Initialize selected user
 simple_initializer(name = "selected_user", initial_value = "Sexy Theo")
-# 2. (Food Data) Initialize food_df data frame with the data from supabase
-simple_initializer(name = "food_df", initial_value= load_food_data(st.session_state.selected_user))
+# 2. CONSTANT UPDATE food data from supabase
+st.session_state.food_df = load_food_data(st.session_state.selected_user)
 # 3. (Log Food) Initialize session state keys for the input fields
 for x in inputs_config.values():
     simple_initializer(name = x["norm"], initial_value = x["initial"])
 # 4. (Max Values) Initialize macro targets into a dictionary from supabase with the most recent value
-simple_initializer(name = "targets_dict_recent", initial_value = load_macro_goals(st.session_state.selected_user))
+if 'targets_dict_recent' not in st.session_state:
+    st.session_state.targets_dict_recent = load_macro_goals(st.session_state.selected_user)
 # 6. (Max Values)Initialize max value keys in session_stat  e
 for x,y in st.session_state.targets_dict_recent.items():
+
     simple_initializer(x,y)
 # 7. (Log Food) Initialize datetime, used for the input buttons
 simple_initializer(
@@ -793,4 +802,6 @@ button_clicked = floating_button(
     label="🍽️ Add Food"
 )
 if button_clicked:
+    reset_input_field()
     food_input_dialog() # Opens the @st.dialog window
+
