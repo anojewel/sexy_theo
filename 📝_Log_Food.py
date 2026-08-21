@@ -79,6 +79,7 @@ st.set_page_config(
     page_title= "💋 Baby Tracker",
     layout="centered", 
     initial_sidebar_state="collapsed",
+    page_icon="assets/app_icon.png"
 )
 # KIll reszie handle on plotly
 st.markdown("""
