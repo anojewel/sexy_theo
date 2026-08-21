@@ -74,12 +74,15 @@ from st_supabase_connection import SupabaseConnection
 from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
+from PIL import Image
 ### BEGIN CONFIGURATION ###
+
+icon = Image.open("assets/app_logo.png")
 st.set_page_config(
     page_title= "💋 Baby Tracker",
     layout="centered", 
     initial_sidebar_state="collapsed",
-    page_icon="assets/app_icon.png"
+    page_icon=icon
 )
 # KIll reszie handle on plotly
 st.markdown("""
