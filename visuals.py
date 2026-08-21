@@ -118,10 +118,10 @@ def donut_progress_bars(for_plot_df):
             go.Pie(
                 values = [non_spill_water, non_spill_oil,  oil_spill, water_spill, empty_air],
                 marker_colors=[
-                    f'rgba({config['rgb']},1)', 
-                    f'rgba({config['rgb']},0.7)', 
+                    f'rgba({config['rgb']},0.85)', 
                     f'rgba({config['rgb']},0.6)', 
-                    f'rgba({config['rgb']},0.4)', 
+                    f'rgba({config['rgb']},0.6)', 
+                    f'rgba({config['rgb']},0.1)', 
                     f'rgba({config['rgb']},0.1)' # Color for empty air
                 ],
                 hole = 0.62, #IMPORTANT DONUT HOLE
