@@ -151,7 +151,7 @@ def single_food_card(row):
         macro_string = macro_string + f"{config['emoji']} {row[macro.lower()]} {config['unit']} "
     # Draw the cards:
     card_button = st.button(
-        label = f"**{row['food_name']}** ‎ ‎ {row['time']:%H:%M} \n\n {macro_string}" if row['eat_status'] == True else f":grey[**{row['food_name']}** ‎ ‎ {row['time']:%H:%M} \n{macro_string}]",
+        label = f"**{row['food_name']}** ‎ ‎ {row['time']:%H:%M} \n\n {macro_string}" if row['eat_status'] == True else f":grey[**{row['food_name']}** ‎ ‎ {row['time']:%H:%M} \n\n {macro_string}]",
         width= 'stretch',
         key = f"food_card_button_{str(row['id'])}" # Adds a key id based on the row number
     )
