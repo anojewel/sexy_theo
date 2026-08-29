@@ -15,6 +15,14 @@ from PIL import Image
 from src import *
 
 def day_view():
+    ### INPUT FIELD UI ###
+    # 1. Floating action button
+    button_clicked = floating_button(
+        label="🍽️ Add Food"
+    )
+    if button_clicked:
+        utils.reset_input_field()
+        components.food_input_dialog() # Opens the @st.dialog window
 
     # 1. Draw the plotly donuts
     st.plotly_chart(
@@ -31,12 +39,4 @@ def day_view():
     components.draw_date_range(st.session_state.date_range, st.session_state.food_df)
     ### END MAIN UI ###
 
-    ### INPUT FIELD UI ###
-    # 1. Floating action button
-    button_clicked = floating_button(
-        label="🍽️ Add Food"
-    )
-    if button_clicked:
-        utils.reset_input_field()
-        components.food_input_dialog() # Opens the @st.dialog window
-
+   

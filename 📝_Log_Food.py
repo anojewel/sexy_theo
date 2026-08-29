@@ -60,7 +60,9 @@
 # REFACTORING TO DIFFERENT FILE NAMESSS woohooo, just learning
 # Day 19 ~ 26 holiday
 # Day 27
-# Refactoring by function/purpose
+# Refactoring just to put ui folderes and src folders
+# Created a new data table for goals, need a lot of work just to make small changes? 
+# My data management is not quite right
 
 # Plans:
 # update the name matcher using FUZZY SEARCH DIFFLIB
