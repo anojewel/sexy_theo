@@ -14,17 +14,20 @@ from PIL import Image
 # In-app
 from src import *
 
+
 def day_view():
-    ### INPUT FIELD UI ###
+    # initialize
+    utils.initialize('date_range',(datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()-datetime.timedelta(days=30),datetime.datetime.now(ZoneInfo("Asia/Taipei")).date())) 
+       
     # 1. Floating action button
     button_clicked = floating_button(
         label="🍽️ Add Food"
     )
     if button_clicked:
         utils.reset_input_field()
-        components.food_input_dialog() # Opens the @st.dialog window
+        components.food_input_dialog()
 
-    # 1. Draw the plotly donuts
+    # 2. Draw the plotly donuts
     st.plotly_chart(
         visuals.donut_progress_bars(
             water_values=st.session_state.water_values,
@@ -35,8 +38,8 @@ def day_view():
         key="main_donut_chart",
         config={'displayModeBar': False,}
     )
-    # 2. Draw food cards:
-    components.draw_date_range(st.session_state.date_range, st.session_state.food_df)
+    # 3. Draw food cards:
+    components.draw_date_range(st.session_state.date_range, st.session_state.food_data)
     ### END MAIN UI ###
 
    
