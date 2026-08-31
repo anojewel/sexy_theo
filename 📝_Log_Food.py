@@ -115,7 +115,7 @@ utils.initialize('selected_user','Sexy Theo')
 if 'food_data' not in st.session_state:
     st.session_state.food_data = db.FromSupabase(st.session_state.selected_user,'food_data')
 if 'goals' not in st.session_state:
-    db.FromSupabase(st.session_state.selected_user,'goals')
+    st.session_state.goals = db.FromSupabase(st.session_state.selected_user,'goals')
 # 3. Variable for the date buttons on top of the food cards
 utils.initialize('selected_date', datetime.datetime.now(ZoneInfo("Asia/Taipei")).date())
 # 4. Constant update the values for the donuts with the selected_date
