@@ -89,26 +89,36 @@ def day_total(date, is_eaten):
     # Make a series of the sum of these stuff
     sum_the_macro = filter_df[[x.key for x in mm.macro_ui_rules]].sum()
     return sum_the_macro
+# 12. Generic Pill Buttons with Actions
 def pill_buttons(actions: dict, key: str):
     """
     Creates a row of pills that execute assigned functions when clicked.
-
-    Args:
-        actions (dict): A dictionary mapping string labels to callable functions.
-        key (str): A unique session state key for the widget.
+    Uses a pending state proxy to allow st.rerun() in the mapped functions.
     """
     initialize(key, None)
+    pending_key = f"{key}_pending"
     
-    selected = st.pills(
+    # 1. Callback: ONLY manages state, no actions or reruns here!
+    def _callback():
+        selected = st.session_state[key]
+        if selected:
+            # Save the choice to the pending flag and visually un-click the pill
+            st.session_state[pending_key] = selected
+            st.session_state[key] = None 
+            
+    # 2. Draw the Widget
+    st.pills(
         label="hidden_label", 
         label_visibility="collapsed",
         options=list(actions.keys()),
-        key=key
+        key=key,
+        on_change=_callback
     )
     
-    # If a pill is clicked, execute its paired function
-    if selected:
-        actions[selected]()
-        # Clear the pill state so it doesn't get stuck in a loop
-        st.session_state[key] = None 
-        st.rerun()
+    # 3. Main Script Flow: Execute the action safely
+    if pending_key in st.session_state:
+        action_str = st.session_state[pending_key]
+        del st.session_state[pending_key]
+        
+        # Execute the mapped function in the main flow (st.rerun() works perfectly here!)
+        actions[action_str]()

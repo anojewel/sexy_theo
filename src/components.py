@@ -89,6 +89,7 @@ def food_input_dialog():
         )
         food_draft.save(db.conn)
         
+        
         # Clear database cache and reset form inputs for the next open
         utils.state_del([
             'food_data', 'food_name', 'datetime', 
@@ -173,6 +174,7 @@ def open_food_editor(food_log: mm.FoodLog):
             'food_data', 'edit_food_name', 'edit_datetime', 'edit_eat_status',
             'edit_calories', 'edit_carbs', 'edit_protein', 'edit_fat'
         ])
+        st.rerun()
 
     def delete_action():
         # Call your built-in class method
@@ -183,6 +185,7 @@ def open_food_editor(food_log: mm.FoodLog):
             'food_data', 'edit_food_name', 'edit_datetime', 'edit_eat_status',
             'edit_calories', 'edit_carbs', 'edit_protein', 'edit_fat'
         ])
+        st.rerun()
 
     # E1. Draw the pills and pass the actions
     utils.pill_buttons(
