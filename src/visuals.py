@@ -115,8 +115,8 @@ def donut_progress_bars(water_values, oil_values, bucket_values):
                 marker_colors=[
                     f'rgba({x.rgb},0.85)', 
                     f'rgba({x.rgb},0.6)', 
-                    f'rgba({x.rgb},0.6)', 
-                    f'rgba({x.rgb},0.1)', 
+                    f'rgba({x.rgb},0.9)', 
+                    f'rgba({x.rgb},1.0)', 
                     f'rgba({x.rgb},0.1)' # Color for empty air
                 ],
                 hole = 0.62, #IMPORTANT DONUT HOLE
