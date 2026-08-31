@@ -10,7 +10,6 @@ from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
 from PIL import Image
 # Self
-from . import hashmap
 from . import visuals
 from . import database as db
 from . import utils
@@ -50,7 +49,7 @@ def food_input_dialog():
         max_val = st.session_state.bucket_values[x.key]
         # C1. The Number Input 
         st.number_input(
-            label = f"{x.emoji} {x.title} ({x.unit})" + f"{current_val}/{projected_val}" , 
+            label = f"{x.emoji} {x.title} ({x.unit}): " + f"{current_val:.1f}/{projected_val:.1f}" , 
             min_value=0.0, 
             step=x.step_val, 
             key=x.key,
@@ -68,44 +67,52 @@ def food_input_dialog():
                 projected_overflow_color=f'rgba({x.rgb},0.6)'
             ),
             width= "stretch",
-            config={'displayModeBar': False}
+            config={'displayModeBar': False},
+            key=f"progress_chart_{x.key}"
         )
 
-    # D. Log button
-    # D.1. Create FoodLog item from the session state inputs
-    macros_draft = mm.MacroVal(
-        calories = st.session_state.calories,
-        carbs = st.session_state.carbs,
-        protein = st.session_state.protein,
-        fat = st.session_state.fat
-    )
-    food_draft = mm.FoodLog(
-        food_name= st.session_state.food_name,
-        macros = macros_draft,
-        date = st.session_state.datetime.date(),
-        time = st.session_state.datetime.time(),
-        username = st.session_state.selected_user,
-        eat_status = True if st.session_state.datetime.date() <= datetime.datetime.now(ZoneInfo('Asia/Taipei')).date() else False
-    )
-    # 
-    if st.button("Log Food",icon="➕",width='stretch',type="primary"):
+    # D. Log button & Clear button actions
+    def save_action():
+        macros_draft = mm.MacroVal(
+            calories=st.session_state.calories,
+            carbs=st.session_state.carbs,
+            protein=st.session_state.protein,
+            fat=st.session_state.fat
+        )
+        food_draft = mm.FoodLog(
+            food_name=st.session_state.food_name,
+            macros=macros_draft,
+            date=st.session_state.datetime.date(),
+            time=st.session_state.datetime.time(),
+            username=st.session_state.selected_user,
+            eat_status=True if st.session_state.datetime.date() <= datetime.datetime.now(ZoneInfo('Asia/Taipei')).date() else False
+        )
         food_draft.save(db.conn)
-        del st.session_state.food_data
-        st.rerun() 
         
-    st.button("Ingredient Mode",width='stretch',icon = "🥣")
+        # Clear database cache and reset form inputs for the next open
+        utils.state_del([
+            'food_data', 'food_name', 'datetime', 
+            'calories', 'carbs', 'protein', 'fat'
+        ])
 
-# 2. Make window for user to set goals and max (WORKING)
-@st.dialog("Set Maximum Target")
-def open_set_max():
-    for x, y in hashmap.macros_config.items():
-        st.number_input(label = x, width = 100, value = st.session_state[y["max_key"]], key = y["max_key"])
-    st.button(
-        label = "Save", 
-        on_click = db.save_max,
-        disabled = any(st.session_state[x["max_key"]] == 0 for x in hashmap.macros_config.values())
-        )
-# 3. Window to edit the existing logs   
+    def clear_action():
+        # Deleting these keys lets your utils.initialize() functions reset them to defaults automatically
+        utils.state_del([
+            'food_name', 'datetime', 
+            'calories', 'carbs', 'protein', 'fat'
+        ])
+
+    # D1. Draw the pills
+    utils.pill_buttons(
+        actions={
+            "➕ Log Food": save_action,
+            "🧹 Clear": clear_action
+        },
+        key="input_pill_key"
+    )
+        
+    st.button("Ingredient Mode", width='stretch', icon="🥣")
+# 2. Window to edit the existing logs   
 def clear_dialog_states():
     keys_to_purge = ["edit_food_name", "edit_datetime", "edit_eat_status"]
     for key in keys_to_purge:
@@ -145,41 +152,47 @@ def open_food_editor(food_log: mm.FoodLog):
         key="edit_eat_status",
         value = food_log.eat_status
     )
-    # E.buttons for saving and deleting, 
-        # Initialize
-    utils.initialize('pill_key',None)
-    st.pills(
-        label = "", 
-        label_visibility= "collapsed",
-        options = ["💾 Save", "❌ Delete"],
-        key = "pill_key"
-    )
-    # E1. Mechanics for each button to do shit
-    clicked_pill = st.session_state.pill_key
-    if clicked_pill == "💾 Save":
-        macros_draft = mm.MacroVal(
-            calories= st.session_state.edit_calories,
-            carbs= st.session_state.edit_carbs,
-            protein= st.session_state.edit_protein,
-            fat= st.session_state.edit_fat
-        )
-        food_draft = mm.FoodLog(
-            food_name = st.session_state.edit_food_name,
-            macros = macros_draft,
-            date = st.session_state.edit_datetime.date(),
-            time = st.session_state.edit_datetime.time(),
-            username = st.session_state.selected_user,
-            eat_status= st.session_state.edit_eat_status,
-            id = food_log.id
-        )
-        food_draft.save(db.conn)
-        del st.session_state.food_data
-        st.rerun() # to exit to main page
-    elif clicked_pill == "❌ Delete":
+    # E. Define the target actions using your existing class methods
+    def save_action():
+        # Update the existing object's attributes with the new UI widget states
+        food_log.food_name = st.session_state.edit_food_name
+        food_log.date = st.session_state.edit_datetime.date()
+        food_log.time = st.session_state.edit_datetime.time()
+        food_log.eat_status = st.session_state.edit_eat_status
+        
+        food_log.macros.calories = st.session_state.edit_calories
+        food_log.macros.carbs = st.session_state.edit_carbs
+        food_log.macros.protein = st.session_state.edit_protein
+        food_log.macros.fat = st.session_state.edit_fat
+
+        # Call your built-in class method
+        food_log.save(db.conn)
+        
+        # Nuke the database cache and all dialog widget states
+        utils.state_del([
+            'food_data', 'edit_food_name', 'edit_datetime', 'edit_eat_status',
+            'edit_calories', 'edit_carbs', 'edit_protein', 'edit_fat'
+        ])
+
+    def delete_action():
+        # Call your built-in class method
         food_log.delete(db.conn)
-        del st.session_state.food_data
-        st.rerun()
-# 4. Draw Single Food Card
+        
+        # Nuke the database cache and all dialog widget states
+        utils.state_del([
+            'food_data', 'edit_food_name', 'edit_datetime', 'edit_eat_status',
+            'edit_calories', 'edit_carbs', 'edit_protein', 'edit_fat'
+        ])
+
+    # E1. Draw the pills and pass the actions
+    utils.pill_buttons(
+        actions={
+            "💾 Save": save_action,
+            "❌ Delete": delete_action
+        }, 
+        key="edit_pill_key"
+    )
+# 3. Draw Single Food Card
 def single_food_card(food_log: mm.FoodLog):
     # A. Write the button labels
     macro_string = ""
@@ -200,7 +213,7 @@ def single_food_card(food_log: mm.FoodLog):
         # C.1 Open the food editor
         open_food_editor(food_log)
     
-# 5. SINGLE DAY FOOD CARDS
+# 4. SINGLE DAY FOOD CARDS
 def draw_cards_day(date_input,food_data:db.FromSupabase):
     # Filter the same date
     same_date_list = [x for x in food_data.list() if x.date == date_input]
@@ -219,7 +232,7 @@ def draw_cards_day(date_input,food_data:db.FromSupabase):
     for obj in same_date_list:
         single_food_card(obj)
 
-# 6. MULTIPLE DAYS FOOD CARDS
+# 5. MULTIPLE DAYS FOOD CARDS
 def draw_date_range(date_range,food_data:db.FromSupabase):
      # date lists
     date_list = [x.date for x in food_data.list() if ((date_range[0]<=x.date)&(x.date<=date_range[1]))]

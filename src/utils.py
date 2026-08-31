@@ -1,15 +1,15 @@
 # Third Party
 import streamlit as st
 import datetime 
-from plotly.subplots import make_subplots
-from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
 # Self
-from . import hashmap
-
-# 1. Name matcher: fills past data with same name to the sesssion state
+from . import macro_models as mm
 def fill_matching_data():
+    """
+    Searches past food logs for the current food name and updates the 
+    session state with its most recent macro values.
+    """
     # Create filtered df with the same name as the search bar
     same_name_df = st.session_state.food_data.df()[st.session_state.food_data.df()["food_name"] == st.session_state.food_name]
         # Sort by new
@@ -20,59 +20,51 @@ def fill_matching_data():
     if not same_name_df.empty:
     # Single row data frame of the newest same name
         newest_same_name_df = timesort_same_name_df.iloc[0]
-        for macro in hashmap.macros_config:
+        for x in mm.macro_ui_rules:
         # Dynamically update the session state
-            st.session_state[macro.lower()] = newest_same_name_df[macro.lower() ]
-# 2. Initializer function to initialize stuff.
+            st.session_state[x.key] = newest_same_name_df[x.key]
 def initialize(name:str, initial_value):
+    """
+    Sets a default value for a Streamlit session state key if it does 
+    not already exist.
+
+    Args:
+        name (str): The name of the session state key to initialize.
+        initial_value: The starting value to assign to the key.
+    """
     if name not in st.session_state:
         st.session_state[name] = initial_value
-# 3. Function that reset the session_state values for the username change
-def username_change_reset():
-    # List the direct keys to delete
-    keys_to_delete = ["food_data", "targets_dict_recent"]
+def state_del(keys_list:list):
+    """
+    Safely removes a list of keys from the Streamlit session state.
 
-    # Add the macro keys from your config
-    for config in hashmap.macros_config.values():
-        keys_to_delete.append(config["max_key"])
-        
-    # Safely delete them only if they exist in the session state
-    for key in keys_to_delete:
-        if key in st.session_state:
-            del st.session_state[key]
-# 5. Used to use two keys of date and time, so have to convert the input fields into date and time in the session state.
-def sync_datetime_to_split_keys(datetime_key:str, date_key:str, time_key:str):
-    # Safety check (the widget can technically return None if cleared by the user)
-    if st.session_state[datetime_key] is not None:
-        # Push the extracted values into the existing date and time keys!
-        st.session_state[date_key] = st.session_state[datetime_key].date()
-        st.session_state[time_key] = st.session_state[datetime_key].time()
-# 6. DONUT VIEW MODE FORCE SELECT
-def donut_store_memory():
-    if st.session_state.view_mode == 'Day':
-        st.session_state.view_memory = 'Day'
-    elif st.session_state.view_mode == 'Week':
-        st.session_state.view_memory = 'Week'
+    Args:
+        keys_list (list): A list of strings representing the keys to be deleted.
+    """
+    for x in keys_list:
+        if x in st.session_state:
+            del st.session_state[x]
 
-        
-# 8. Label for the donut currently showing
-def donut_label():
-    if st.session_state.selected_date == datetime.datetime.now(ZoneInfo("Asia/Taipei")).date():
-        date_label = 'today.'
-    elif st.session_state.selected_date == datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()-datetime.timedelta(days=1):
-        date_label = 'yesterday.'
-    else:
-        date_label = f"{st.session_state.selected_date:%d %B %Y}."
-    if st.session_state.view_mode == 'Average' or st.session_state.view_memory == 'Average':
-        return f"Showing daily average from {st.session_state.date_range[0]:%d %B %Y} ~ {st.session_state.date_range[1]:%d %B %Y}."
-    elif st.session_state.view_mode == 'Day' or st.session_state.view_memory == 'Day':
-        return f"Showing data for {date_label}"
-# 9. Action that resets the input session_state variables
-def reset_input_field():
-    for x in hashmap.inputs_config.values():
-        st.session_state[x['norm']] = x['initial']
-# 10. Filtering for initialization of bucket_values
+def segment_memorize(key:str, memo_key:str, value):
+    """
+    Stores the current value of a Streamlit segmented control into a 
+    memory variable to persist user navigation.
+
+    Args:
+        key (str): The session state key of the widget being observed.
+        memo_key (str): The session state key where the memory will be stored.
+        value (any): The target value to check and memorize.
+    """
+    if st.session_state[key] == value:
+        st.session_state[memo_key] = value
 def initial_bucket_filter():
+    """
+    Retrieves the active macro target goals for the current date. 
+    If multiple goals overlap today, it returns the one with the shortest duration.
+
+    Returns:
+        pd.Series: A single data frame row containing the target maximums for each macro.
+    """
     # Filter out the goals that contain today
     goals_df = st.session_state.goals.df()
     contain_today_df = goals_df[(goals_df['start_date'] <= datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()) & (datetime.datetime.now(ZoneInfo("Asia/Taipei")).date() <= goals_df['end_date'])].copy()
@@ -80,11 +72,43 @@ def initial_bucket_filter():
     contain_today_df['duration'] = contain_today_df['end_date']-contain_today_df['start_date']
     # Sort by duration and select the first row
     return contain_today_df.sort_values(by = 'duration').iloc[0]
-# 11. Create sum series
-def macro_totals(date, is_eaten):
+def day_total(date, is_eaten):
+    """
+    Calculates the total sum of each macronutrient for a specific day.
+
+    Args:
+        date (datetime.date): The date to filter the food logs by.
+        is_eaten (bool): True to sum logged food, False to sum projected (uneaten) food.
+
+    Returns:
+        pd.Series: A series containing the total calculated sums for the tracked macros.
+    """
     food_df = st.session_state.food_data.df()
     # Filter out same day df
     filter_df = food_df[(food_df['date'] == date) & (food_df['eat_status']== is_eaten)]
     # Make a series of the sum of these stuff
-    sum_the_macro = filter_df[[x.lower() for x in hashmap.macros_config]].sum()
+    sum_the_macro = filter_df[[x.key for x in mm.macro_ui_rules]].sum()
     return sum_the_macro
+def pill_buttons(actions: dict, key: str):
+    """
+    Creates a row of pills that execute assigned functions when clicked.
+
+    Args:
+        actions (dict): A dictionary mapping string labels to callable functions.
+        key (str): A unique session state key for the widget.
+    """
+    initialize(key, None)
+    
+    selected = st.pills(
+        label="hidden_label", 
+        label_visibility="collapsed",
+        options=list(actions.keys()),
+        key=key
+    )
+    
+    # If a pill is clicked, execute its paired function
+    if selected:
+        actions[selected]()
+        # Clear the pill state so it doesn't get stuck in a loop
+        st.session_state[key] = None 
+        st.rerun()

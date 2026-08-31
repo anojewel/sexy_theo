@@ -2,14 +2,10 @@
 import streamlit as st
 import datetime 
 import pandas as pd
-from plotly.subplots import make_subplots
 from st_supabase_connection import SupabaseConnection
-from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
 # Self
-from . import hashmap
-from . import utils
 from . import macro_models as mm
 
 # CONNECT FIRST
@@ -20,7 +16,6 @@ class FromSupabase:
         self.table = table
         # This is the line that directly downloads
         self.list_of_dict = conn.table(table).select("*").eq("username", self.username).execute().data
-
     # 1. Helps convert to dataframe
     def df(self):
         if self.table == 'food_data':
@@ -43,7 +38,7 @@ class FromSupabase:
             if not self.list_of_dict:
                 goals_df = pd.DataFrame(
                     columns = goals_columns, 
-                    data = [[None, self.username, 'custom', datetime.datetime.now(ZoneInfo('Asia/Taipei')).date(), datetime.datetime.now(ZoneInfo('Asia/Taipei')).date()+datetime.timedelta(days = 365*100)] + [x['max_val'] for x in hashmap.macros_config.values()]]
+                    data = [[None, self.username, 'custom', datetime.datetime.now(ZoneInfo('Asia/Taipei')).date(), datetime.datetime.now(ZoneInfo('Asia/Taipei')).date()+datetime.timedelta(days = 365*100)] + [x.max_val for x in mm.macro_ui_rules]]
                     )
                 return goals_df
             else:

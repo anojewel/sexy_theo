@@ -42,7 +42,6 @@ class MacroVal:
         self.carbs = carbs
         self.protein = protein
         self.fat = fat
-        self.list = [calories,carbs,protein,fat]
 class MacroUI:
     """
     Holds the UI rules and display settings for drawing a macro input field or progress bar.

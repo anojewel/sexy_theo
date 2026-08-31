@@ -1,18 +1,12 @@
 # Third Party
-import streamlit as st
-import datetime 
 import pandas as pd
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
-from st_supabase_connection import SupabaseConnection
 from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
-from zoneinfo import ZoneInfo
-from PIL import Image
 # Self
-from . import hashmap
-
+from . import macro_models as mm
 # 1. Plotly figures inside the input dialog
 def figure_progress_bar(
         factor, 
@@ -99,11 +93,11 @@ def donut_progress_bars(water_values, oil_values, bucket_values):
         specs = [[ {"type" : "domain"}] * 4] # domain types are require for donuts
     )
     # The subplots have numbers assigned for each row, we need to assign them with enumerate.
-    for col_index, (macro, config) in enumerate(hashmap.macros_config.items(), start = 1):
+    for index, x in enumerate(mm.macro_ui_rules,start=1):
         # Take numbers from each macro
-        water = water_values[macro.lower()] 
-        oil = oil_values[macro.lower()] 
-        bucket = bucket_values[macro.lower()]
+        water = water_values[x.key] 
+        oil = oil_values[x.key] 
+        bucket = bucket_values[x.key]
         # Bucket math
         oil_bucket = max(bucket - water, 0) # The non-water volume inside the bucket is the oil_bucket
         water_spill = max(0, water - bucket) 
@@ -112,18 +106,18 @@ def donut_progress_bars(water_values, oil_values, bucket_values):
         non_spill_oil = min(oil_bucket, oil)
         empty_air = max(0, bucket - (water + oil))
         #
-        donut_text = f"{config['emoji']} <br>{macro} <br> {(oil+water):.0f}/{bucket:.0f}"
+        donut_text = f"{x.emoji} <br>{x.title} <br> {(oil+water):.0f}/{bucket:.0f}"
         # Plotly function that make graphs inside the graph
         fig.add_trace(
             # Draw the donuts
             go.Pie(
                 values = [non_spill_water, non_spill_oil,  oil_spill, water_spill, empty_air],
                 marker_colors=[
-                    f'rgba({config['rgb']},0.85)', 
-                    f'rgba({config['rgb']},0.6)', 
-                    f'rgba({config['rgb']},0.6)', 
-                    f'rgba({config['rgb']},0.1)', 
-                    f'rgba({config['rgb']},0.1)' # Color for empty air
+                    f'rgba({x.rgb},0.85)', 
+                    f'rgba({x.rgb},0.6)', 
+                    f'rgba({x.rgb},0.6)', 
+                    f'rgba({x.rgb},0.1)', 
+                    f'rgba({x.rgb},0.1)' # Color for empty air
                 ],
                 hole = 0.62, #IMPORTANT DONUT HOLE
                 textinfo = "none",
@@ -132,13 +126,13 @@ def donut_progress_bars(water_values, oil_values, bucket_values):
                 direction = 'clockwise',
             ),
             row = 1,
-            col = col_index,
+            col = index,
         )
     #  Add the centered text
-        donut_logo = f"{config['emoji']}"
-        donut_text =  f"{macro}"
+        donut_logo = f"{x.emoji}"
+        donut_text =  f"{x.title}"
         donut_numbers = f'{(oil+water):.0f}/{bucket:.0f}'
-        x_pos = (col_index - 1) * 0.261 + 0.109
+        x_pos = (index - 1) * 0.261 + 0.109
         
         fig.add_annotation(
             text=donut_logo,
