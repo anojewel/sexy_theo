@@ -1,1 +1,1 @@
-__all__ = ['day_view','week_view']
+__all__ = ['day_view','week_view', 'sidebar']
