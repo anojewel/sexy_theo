@@ -89,12 +89,12 @@ def food_input_dialog():
         )
         food_draft.save(db.conn)
         
-        
         # Clear database cache and reset form inputs for the next open
         utils.state_del([
             'food_data', 'food_name', 'datetime', 
             'calories', 'carbs', 'protein', 'fat'
         ])
+        st.rerun()
 
     def clear_action():
         # Deleting these keys lets your utils.initialize() functions reset them to defaults automatically
@@ -102,7 +102,7 @@ def food_input_dialog():
             'food_name', 'datetime', 
             'calories', 'carbs', 'protein', 'fat'
         ])
-
+        st.rerun()
     # D1. Draw the pills
     utils.pill_buttons(
         actions={
