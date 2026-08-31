@@ -106,7 +106,12 @@ def open_set_max():
         disabled = any(st.session_state[x["max_key"]] == 0 for x in hashmap.macros_config.values())
         )
 # 3. Window to edit the existing logs   
-@st.dialog("✏️ Edit Log")
+def clear_dialog_states():
+    keys_to_purge = ["edit_food_name", "edit_datetime", "edit_eat_status"]
+    for key in keys_to_purge:
+        if key in st.session_state:
+            del st.session_state[key]
+@st.dialog("✏️ Edit Log",  on_dismiss=clear_dialog_states)
 def open_food_editor(food_log: mm.FoodLog):
     # A. Allow user to edit the food text
     st.text_input(

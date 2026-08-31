@@ -18,8 +18,8 @@ class FoodLog:
             'carbs': self.macros.carbs,
             'protein': self.macros.protein,
             'fat': self.macros.fat,
-            'date': self.date,
-            'time': self.time,
+            'date': str(self.date),
+            'time': str(self.time),
             'username': self.username,
             'eat_status': self.eat_status
         }
