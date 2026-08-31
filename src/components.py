@@ -185,9 +185,13 @@ def single_food_card(food_log: mm.FoodLog):
     macro_string = ""
     for x in mm.macro_ui_rules:
         macro_string = macro_string + f"{x.emoji} {getattr(food_log.macros,x.key)} {x.unit} "
+    if food_log.eat_status == True:
+        button_label = f"**{food_log.food_name}** ‎ ‎ {food_log.time:%H:%M} \n\n {macro_string}"
+    else:
+        button_label = f":grey[**{food_log.food_name}** ‎ ‎ {food_log.time:%H:%M}] \n\n :grey[{macro_string}]"
     # B. Draw the cards:
     card_button = st.button(
-        label= f"**{food_log.food_name}** ‎ ‎ {food_log.time:%H:%M} \n\n {macro_string}" if food_log.eat_status == True else f":grey[**{food_log.food_name}** ‎ ‎ {food_log.time:%H:%M} \n\n {macro_string}]",
+        label= button_label,
         width= 'stretch',
         key = f"food_card_button_{str(food_log.id)}" # Adds a key id based on the row number
     )
