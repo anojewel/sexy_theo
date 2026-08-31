@@ -2,29 +2,17 @@
 # Third Party
 import streamlit as st
 import datetime 
-import pandas as pd
-import plotly.express as px
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
-from st_supabase_connection import SupabaseConnection
 from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
-from PIL import Image
 # In-app
 from src import *
-
-
 def day_view():
-    # initialize
-    utils.initialize('date_range',(datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()-datetime.timedelta(days=30),datetime.datetime.now(ZoneInfo("Asia/Taipei")).date())) 
-       
     # 1. Floating action button
     button_clicked = floating_button(
         label="🍽️ Add Food"
     )
     if button_clicked:
-        utils.reset_input_field()
         components.food_input_dialog()
 
     # 2. Draw the plotly donuts
@@ -39,7 +27,8 @@ def day_view():
         config={'displayModeBar': False,}
     )
     # 3. Draw food cards:
-    components.draw_date_range(st.session_state.date_range, st.session_state.food_data)
+    date_range = (datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()-datetime.timedelta(days=30),datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()+datetime.timedelta(days=365*100))
+    components.draw_date_range(date_range, st.session_state.food_data)
     ### END MAIN UI ###
 
    
