@@ -26,8 +26,8 @@ def open(view_mode):
     today = datetime.datetime.now(tz).date()
 
     # Calculate current week bounds (Sunday to Saturday)
-    days_since_sunday = (today.weekday() + 1) % 7
-    start_of_week = today - datetime.timedelta(days=days_since_sunday)
+    # Calculate current week bounds (Monday to Sunday)
+    start_of_week = today - datetime.timedelta(days=today.weekday())
     end_of_week = start_of_week + datetime.timedelta(days=6)
 
     # Calculate current month bounds
@@ -81,10 +81,9 @@ def open(view_mode):
         start, end = date_tuple
         
         if view_mode == 'Week':
-            # Must start on Sunday (6) and be exactly 6 days apart
-            if start.weekday() != 6 or (end - start).days != 6:
-                return "Date range must be exactly one calendar week (Sunday to Saturday)."
-                            
+            # Must start on Monday (0) and be exactly 6 days apart
+            if start.weekday() != 0 or (end - start).days != 6:
+                return "Date range must be exactly one calendar week (Monday to Sunday)."        
         elif view_mode == 'Month':
             # Must start on day 1 and end on the final day of the same month
             last_day_of_month = calendar.monthrange(start.year, start.month)[1]

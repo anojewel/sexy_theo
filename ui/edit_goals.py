@@ -40,9 +40,9 @@ def open(goals_log: mm.GoalsLog):
         start, end = date_tuple
         
         if view_mode == 'Week':
-            if start.weekday() != 6 or (end - start).days != 6:
-                return "Date range must be exactly one calendar week (Sunday to Saturday)."
-                        
+            # Must start on Monday (0) and be exactly 6 days apart
+            if start.weekday() != 0 or (end - start).days != 6:
+                return "Date range must be exactly one calendar week (Monday to Sunday)."                
         elif view_mode == 'Month':
             last_day_of_month = calendar.monthrange(start.year, start.month)[1]
             if start.day != 1 or end.day != last_day_of_month or start.month != end.month:
