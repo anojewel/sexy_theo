@@ -29,8 +29,8 @@ def open(goals_log: mm.GoalsLog):
             title='', 
             key='edit_goal_date'
         )
-        
-    utils.macros_input_field(goals_log.macros, 'edit_goal_macros')
+    
+    utils.macros_input_field(goals_log.macros, 'edit_goal_macros',show_macroval=True)
 
     # 3. Validation Logic
     def _get_range_error(view_mode, date_tuple):

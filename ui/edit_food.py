@@ -21,6 +21,7 @@ def open(food_log: mm.FoodLog):
     utils.initialize('edit_food_name', food_log.food_name)
     utils.initialize('edit_datetime', datetime.datetime.combine(food_log.date,food_log.time))
     utils.initialize('edit_eat_status', food_log.eat_status)
+
     # A. Allow user to edit the food text
     st.text_input(
             label="Food Name", 
@@ -33,7 +34,7 @@ def open(food_log: mm.FoodLog):
         label_visibility = "collapsed",
     )
     # C. Allow user to edit the macro values
-    utils.macros_input_field(food_log.macros, 'edit_macros_value')
+    utils.macros_input_field(food_log.macros, 'edit_macros_value', show_macroval=True)
     # D. Draw toggle and buttons for saving/deleting
     st.toggle(
         label="✅ Eaten", 

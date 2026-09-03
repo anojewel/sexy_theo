@@ -59,7 +59,7 @@ def open(view_mode):
         date_range_picker(title='', key='new_goal_custom')
         
     ### 3. MacroVal input fields ###
-    utils.macros_input_field(mm.MacroVal(1700,220,100,55), 'new_goal_macros')
+    utils.macros_input_field(mm.MacroVal(1700,220,100,55), 'new_goal_macros',show_macroval=True)
     
     ### 4. Time input processing & Validation Definitions ###
     time_key_map = {

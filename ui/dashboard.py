@@ -51,7 +51,6 @@ class FoodCards:
         ):
             st.session_state.selected_date = date_input
             st.rerun()
-            st.session_state.view_mode = 'Day'
         # Draw all the cards within that same day:
         for obj in same_date_list:
             FoodCards.single_food_card(obj)
@@ -81,7 +80,8 @@ def draw():
 
     # 2. Try to draw the plotly donuts
     try:
-        utils.initialize('bucket_values', utils.initial_bucket_filter())
+        # Sync bucket values with the specificty of the selected date
+        st.session_state.bucket_values = utils.goal_specificity_choose(st.session_state.selected_date)
         
         st.plotly_chart(
             visuals.donut_progress_bars(
@@ -94,7 +94,7 @@ def draw():
             config={'displayModeBar': False}
         )
     except ValueError:
-        st.info("No active goal for today. Head to the Goals tab to set your targets!", icon="🎯")
+        st.info(f"No active goal for {st.session_state.selected_date:%d %B %Y}. Head to the Goals tab to set your targets!", icon="🎯")
     # 3. Date Range Selector
     date_range_picker(title='',label_visibility='collapsed',key='selected_date_range')
     # 4. Draw food cards:

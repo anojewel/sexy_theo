@@ -14,18 +14,21 @@ def open():
     # Z. Draw donuts or show warning if no goals exist
     utils.initialize('new_macros_val', mm.MacroVal(0.0,0.0,0.0,0.0))
     utils.initialize('new_datetime', datetime.datetime.now(ZoneInfo('Asia/Taipei')))
-    
+
     if 'bucket_values' in st.session_state:
         # For plotly to use the chosen date
         food_df = st.session_state.food_data.df()
         same_date_df = food_df[food_df['date']==st.session_state.new_datetime.date()]
         st.session_state.sum_same_date = same_date_df[[x.key for x in mm.macro_ui_rules]].sum()
-        
-        visuals.donut_progress_bars(
-            water_values=st.session_state.water_values,
-            oil_values=st.session_state.sum_same_date,
+        st.plotly_chart(
+            visuals.donut_progress_bars(
+            water_values=st.session_state.sum_same_date,
+            oil_values=st.session_state.new_macros_val.dict(),
             bucket_values=st.session_state.bucket_values
-        )
+            ),
+            width='stretch'
+        )   
+        
     else:
         # Friendly message for new users!
         st.info("No goals set yet! Set your daily macro goals to see your progress rings here.",icon="🎯")
