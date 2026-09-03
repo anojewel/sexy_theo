@@ -39,12 +39,12 @@ class GoalCards:
         line_1 = f"**{goals_log.start_date.day} {goals_log.start_date:%B %Y} ~ {goals_log.end_date.day} {goals_log.end_date:%B %Y}**"
         
         # Line 2 string
-        line_2 = "🎯 Target: "
+        line_2 = "🎯: "
         for x in mm.macro_ui_rules:
             line_2 += f"{x.emoji} {getattr(goals_log.macros, x.key)} {x.unit}  "
             
         # Line 3 string
-        line_3 = "📊 Average: "
+        line_3 = "📊: "
         for x in mm.macro_ui_rules:
             line_3 += f"{x.emoji} {avg_series[x.key]} {x.unit}  "
                 
@@ -79,7 +79,7 @@ with st.sidebar:
         options = ["Sexy Ano", "Sexy Theo", "Guest"],
         key = "selected_user",
         on_change=utils.state_del,
-        args=(['food_data', 'goals', 'user_settings'],)
+        args=(['food_data','goals','bucket_values'],)
     )
 ### 1 ###
 # Segment Selector for time range WITH MEMORY
