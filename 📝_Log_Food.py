@@ -53,7 +53,7 @@ with st.sidebar:
         options = ["Sexy Ano", "Sexy Theo", "Guest"],
         key = "selected_user",
         on_change=utils.state_del,
-        args=(['food_data'],)
+        args=(['food_data','goals','bucket_values'],)
     )
 ### END SIDEBAR UI ###
 
