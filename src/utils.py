@@ -41,24 +41,24 @@ def segment_memorize(key:str, memo_key:str, value):
     """
     if st.session_state[key] == value:
         st.session_state[memo_key] = value
-def initial_bucket_filter():
+def goal_specificity_choose(target_date:date):
     goals_df = st.session_state.goals.df()
     
     # Guard clause: if there are no goals at all
     if goals_df.empty:
         raise ValueError("No goals exist in database.")
 
-    contain_today_df = goals_df[
-        (goals_df['start_date'] <= datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()) & 
-        (datetime.datetime.now(ZoneInfo("Asia/Taipei")).date() <= goals_df['end_date'])
+    contain_target_df = goals_df[
+        (goals_df['start_date'] <= target_date) & 
+        (target_date <= goals_df['end_date'])
     ].copy()
     
     # Guard clause: if no goals overlap with today
-    if contain_today_df.empty:
+    if contain_target_df.empty:
         raise ValueError("No active goals for today.")
         
-    contain_today_df['duration'] = contain_today_df['end_date'] - contain_today_df['start_date']
-    return contain_today_df.sort_values(by='duration').iloc[0]
+    contain_target_df['duration'] = contain_target_df['end_date'] - contain_target_df['start_date']
+    return contain_target_df.sort_values(by='duration').iloc[0]
 
 def day_total(date, is_eaten,food_data):
     """
@@ -110,17 +110,27 @@ def pill_buttons(actions: dict, key: str):
         
         # Execute the mapped function in the main flow (st.rerun() works perfectly here!)
         actions[action_str]()
-def macros_input_field(initial_macroval: mm.MacroVal, target_macroval_key):
+def macros_input_field(initial_macroval: mm.MacroVal, target_macroval_key, show_macroval = False):
     # A. Use the input values to initial keys
     initialize(target_macroval_key, initial_macroval)
     
     # B. Create pill option labels
-    options_map = {f"{x.key}": f"{x.emoji} {getattr(st.session_state[target_macroval_key], x.key)} {x.unit}" for x in mm.macro_ui_rules}
+    options_map = {f"{x.key}": f"{x.emoji}" for x in mm.macro_ui_rules}
     
     # --- MEMORY INITIALIZATION ---
     initialize("pill_input_mode_memo", 'calories')
-    
-    # C. Draw the pills
+    # C1 Draw badges
+    macros_number_label=""  
+    for x in mm.macro_ui_rules:
+        macros_number_label = macros_number_label + f"{getattr(st.session_state[target_macroval_key],x.key)} ({x.unit})‎ ‎ ‎ ‎ ‎ " 
+    if show_macroval == True:
+        st.button(
+            width='stretch',
+            type="tertiary",
+            label=macros_number_label,
+            disabled=True
+        ) 
+    # C2. Draw the pills
     st.pills(
         label="",
         label_visibility="collapsed",
@@ -158,7 +168,8 @@ def macros_input_field(initial_macroval: mm.MacroVal, target_macroval_key):
         key=f"macros_number_input_{active_mode}",
         on_change=_change_target,
         step=step_map[active_mode],
-        format="%.1f"
+        format="%.1f",
+        min_value=0.0
     )
 
     
