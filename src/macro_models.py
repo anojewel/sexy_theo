@@ -10,29 +10,6 @@ class FoodLog:
         self.time = time
         self.username = username
         self.eat_status = eat_status
-    # 1. Module to Save the FoodLog item to database
-    def save(self, conn):
-        payload = {
-            'food_name': self.food_name,
-            'calories': self.macros.calories,
-            'carbs': self.macros.carbs,
-            'protein': self.macros.protein,
-            'fat': self.macros.fat,
-            'date': str(self.date),
-            'time': str(self.time),
-            'username': self.username,
-            'eat_status': self.eat_status
-        }
-        if self.id is None:
-            # Save new
-            conn.table("food_data").insert(payload).execute()
-        else:
-            # Save edits
-            conn.table("food_data").update(payload).eq('id',int(self.id)).execute()
-    # 2. Module to delete item from database
-    def delete(self,conn):
-        conn.table("food_data").delete().eq('id',int(self.id)).execute()
-    # 3. Module to create a food card based on the given database
 class MacroVal:
     '''
     Holds the values of a particular set of numbers representing the calories carbs and protein
@@ -42,6 +19,21 @@ class MacroVal:
         self.carbs = carbs
         self.protein = protein
         self.fat = fat
+    def dict(self):
+        return {
+            "calories": self.calories,
+            "carbs": self.carbs,
+            "protein": self.protein,
+            "fat": self.fat
+        }
+class GoalsLog:
+    def __init__(self,username,range_type,start_date,end_date,macros:MacroVal,id=None):
+        self.username = username    
+        self.range_type = range_type
+        self.start_date = start_date
+        self.end_date = end_date
+        self.macros= macros
+        self.id = id
 class MacroUI:
     """
     Holds the UI rules and display settings for drawing a macro input field or progress bar.

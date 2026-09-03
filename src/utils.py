@@ -1,32 +1,15 @@
 # Third Party
 import streamlit as st
 import datetime 
+import pandas as pd
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
 # Self
 from . import macro_models as mm
-def fill_matching_data():
-    """
-    Searches past food logs for the current food name and updates the 
-    session state with its most recent macro values.
-    """
-    # Create filtered df with the same name as the search bar
-    same_name_df = st.session_state.food_data.df()[st.session_state.food_data.df()["food_name"] == st.session_state.food_name]
-        # Sort by new
-    timesort_same_name_df = same_name_df.sort_values(
-        by = ["date", "time"],
-        ascending = False
-    )
-    if not same_name_df.empty:
-    # Single row data frame of the newest same name
-        newest_same_name_df = timesort_same_name_df.iloc[0]
-        for x in mm.macro_ui_rules:
-        # Dynamically update the session state
-            st.session_state[x.key] = newest_same_name_df[x.key]
 def initialize(name:str, initial_value):
     """
     Sets a default value for a Streamlit session state key if it does 
-    not already exist.
+    not already exist. Do not use for callable initial values.
 
     Args:
         name (str): The name of the session state key to initialize.
@@ -34,6 +17,7 @@ def initialize(name:str, initial_value):
     """
     if name not in st.session_state:
         st.session_state[name] = initial_value
+    
 def state_del(keys_list:list):
     """
     Safely removes a list of keys from the Streamlit session state.
@@ -58,21 +42,25 @@ def segment_memorize(key:str, memo_key:str, value):
     if st.session_state[key] == value:
         st.session_state[memo_key] = value
 def initial_bucket_filter():
-    """
-    Retrieves the active macro target goals for the current date. 
-    If multiple goals overlap today, it returns the one with the shortest duration.
-
-    Returns:
-        pd.Series: A single data frame row containing the target maximums for each macro.
-    """
-    # Filter out the goals that contain today
     goals_df = st.session_state.goals.df()
-    contain_today_df = goals_df[(goals_df['start_date'] <= datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()) & (datetime.datetime.now(ZoneInfo("Asia/Taipei")).date() <= goals_df['end_date'])].copy()
-    # Create duration column:
-    contain_today_df['duration'] = contain_today_df['end_date']-contain_today_df['start_date']
-    # Sort by duration and select the first row
-    return contain_today_df.sort_values(by = 'duration').iloc[0]
-def day_total(date, is_eaten):
+    
+    # Guard clause: if there are no goals at all
+    if goals_df.empty:
+        raise ValueError("No goals exist in database.")
+
+    contain_today_df = goals_df[
+        (goals_df['start_date'] <= datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()) & 
+        (datetime.datetime.now(ZoneInfo("Asia/Taipei")).date() <= goals_df['end_date'])
+    ].copy()
+    
+    # Guard clause: if no goals overlap with today
+    if contain_today_df.empty:
+        raise ValueError("No active goals for today.")
+        
+    contain_today_df['duration'] = contain_today_df['end_date'] - contain_today_df['start_date']
+    return contain_today_df.sort_values(by='duration').iloc[0]
+
+def day_total(date, is_eaten,food_data):
     """
     Calculates the total sum of each macronutrient for a specific day.
 
@@ -83,13 +71,12 @@ def day_total(date, is_eaten):
     Returns:
         pd.Series: A series containing the total calculated sums for the tracked macros.
     """
-    food_df = st.session_state.food_data.df()
+    food_df = food_data.df()
     # Filter out same day df
     filter_df = food_df[(food_df['date'] == date) & (food_df['eat_status']== is_eaten)]
     # Make a series of the sum of these stuff
     sum_the_macro = filter_df[[x.key for x in mm.macro_ui_rules]].sum()
     return sum_the_macro
-# 12. Generic Pill Buttons with Actions
 def pill_buttons(actions: dict, key: str):
     """
     Creates a row of pills that execute assigned functions when clicked.
@@ -112,7 +99,8 @@ def pill_buttons(actions: dict, key: str):
         label_visibility="collapsed",
         options=list(actions.keys()),
         key=key,
-        on_change=_callback
+        on_change=_callback,
+        width='stretch'
     )
     
     # 3. Main Script Flow: Execute the action safely
@@ -122,3 +110,56 @@ def pill_buttons(actions: dict, key: str):
         
         # Execute the mapped function in the main flow (st.rerun() works perfectly here!)
         actions[action_str]()
+def macros_input_field(initial_macroval: mm.MacroVal, target_macroval_key):
+    # A. Use the input values to initial keys
+    initialize(target_macroval_key, initial_macroval)
+    
+    # B. Create pill option labels
+    options_map = {f"{x.key}": f"{x.emoji} {getattr(st.session_state[target_macroval_key], x.key)} {x.unit}" for x in mm.macro_ui_rules}
+    
+    # --- MEMORY INITIALIZATION ---
+    initialize("pill_input_mode_memo", 'calories')
+    
+    # C. Draw the pills
+    st.pills(
+        label="",
+        label_visibility="collapsed",
+        width='stretch',
+        key="pill_input_mode",
+        options=[f"{x.key}" for x in mm.macro_ui_rules],
+        format_func=lambda option: options_map[option]
+    )
+    
+    # --- MEMORY CAPTURE ---
+    # If the pill is actively selected, commit it to memory. 
+    # If it resets to None during a date change, this ignores the None and keeps the old memory.
+    if st.session_state.pill_input_mode is not None:
+        st.session_state.pill_input_mode_memo = st.session_state.pill_input_mode
+        
+    # Lock in the active mode using the memory variable
+    active_mode = st.session_state.pill_input_mode_memo
+
+    # D. Replace target macro key action using entered value 
+    def _change_target():
+        for x in mm.macro_ui_rules:
+            if active_mode == x.key:
+                setattr(st.session_state[target_macroval_key], x.key, st.session_state[f"macros_number_input_{x.key}"])
+                
+    # E. Sync four session state variables with the four keys for the number input below
+    for x in mm.macro_ui_rules:
+        st.session_state[f"macros_number_input_{x.key}"] = getattr(st.session_state[target_macroval_key], x.key)
+        
+    # G. Draw number input
+    step_map = {x.key: x.step_val for x in mm.macro_ui_rules}
+    st.number_input(
+        label="",
+        label_visibility="collapsed",
+        width='stretch',
+        key=f"macros_number_input_{active_mode}",
+        on_change=_change_target,
+        step=step_map[active_mode],
+        format="%.1f"
+    )
+
+    
+    

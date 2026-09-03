@@ -75,17 +75,6 @@ def figure_progress_bar(
 
 # 2. Donut Charts
 def donut_progress_bars(water_values, oil_values, bucket_values):
-    """
-    Generates a Plotly figure with four donut charts representing daily macro progress.
-
-    Args:
-        water_values (dict or Series): The primary metric (e.g., eaten food). Keys must match macro names in lowercase.
-        oil_values (dict or Series): The secondary metric (e.g., projected food or uneaten food). Keys must match macro names in lowercase.
-        bucket_values (dict or Series): The maximum target goals for each macro. Keys must match macro names in lowercase.
-
-    Returns:
-        plotly.graph_objs.Figure: A Plotly subplots figure containing the donut charts.
-    """
     # Plotly function that make a single element room, that can put four plots in it
     fig = make_subplots(
         rows = 1,
