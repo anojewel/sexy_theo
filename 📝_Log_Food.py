@@ -31,11 +31,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 ### BEGIN INITIALIZATION ###
-# 1. Initialize selected_user with persisting memory
-utils.initialize('selected_user_memo','Sexy Theo')
-utils.initialize('selected_user',st.session_state.selected_user_memo)
-st.session_state.selected_user_memo = st.session_state.selected_user
-
+# 1. Username selector package:
+utils.username_selector()
 # 2. Iniitalize the database form supabase
 if 'food_data' not in st.session_state:
     st.session_state.food_data = db.FromSupabase(st.session_state.selected_user,'food_data')
@@ -46,15 +43,8 @@ if 'user_settings' not in st.session_state:
 ### END INITIALIZATION ###
 
 ### BEGIN SIDEBAR UI ###
-# 1. username selector
-with st.sidebar:
-    st.selectbox(
-        label = "Select User",
-        options = ["Sexy Ano", "Sexy Theo", "Guest"],
-        key = "selected_user",
-        on_change=utils.state_del,
-        args=(['food_data','goals','bucket_values'],)
-    )
+
+        
 ### END SIDEBAR UI ###
 
 ui.dashboard.draw()
