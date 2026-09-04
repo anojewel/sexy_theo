@@ -59,12 +59,8 @@ class GoalCards:
             ui.edit_goals.open(goals_log)
         
 
-# INITIALIZE SAME AS DASHBOARD
-# 1. Initialize selected_user with persisting memory
-utils.initialize('selected_user_memo','Sexy Theo')
-utils.initialize('selected_user',st.session_state.selected_user_memo)
-st.session_state.selected_user_memo = st.session_state.selected_user
-
+# 1. Username selector package:
+utils.username_selector()
 # 2. Iniitalize the database form supabase
 if 'food_data' not in st.session_state:
     st.session_state.food_data = db.FromSupabase(st.session_state.selected_user,'food_data')
@@ -72,15 +68,6 @@ if 'goals' not in st.session_state:
     st.session_state.goals = db.FromSupabase(st.session_state.selected_user,'goals')
 if 'user_settings' not in st.session_state:
     st.session_state.goals_settings = db.FromSupabase(st.session_state.selected_user, 'user_settings')
-### Sidebar Draw ###
-with st.sidebar:
-    st.selectbox(
-        label = "Select User",
-        options = ["Sexy Ano", "Sexy Theo", "Guest"],
-        key = "selected_user",
-        on_change=utils.state_del,
-        args=(['food_data','goals','bucket_values'],)
-    )
 ### 1 ###
 # Segment Selector for time range WITH MEMORY
 utils.initialize('goal_view_mode_memo', 'Week')
