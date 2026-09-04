@@ -38,8 +38,6 @@ if 'food_data' not in st.session_state:
     st.session_state.food_data = db.FromSupabase(st.session_state.selected_user,'food_data')
 if 'goals' not in st.session_state:
     st.session_state.goals = db.FromSupabase(st.session_state.selected_user,'goals')
-if 'user_settings' not in st.session_state:
-    st.session_state.goals_settings = db.FromSupabase(st.session_state.selected_user, 'user_settings')
 ### END INITIALIZATION ###
 
 ### BEGIN SIDEBAR UI ###
