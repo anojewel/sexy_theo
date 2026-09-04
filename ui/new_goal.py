@@ -25,7 +25,6 @@ def open(view_mode):
     tz = ZoneInfo('Asia/Taipei')
     today = datetime.datetime.now(tz).date()
 
-    # Calculate current week bounds (Sunday to Saturday)
     # Calculate current week bounds (Monday to Sunday)
     start_of_week = today - datetime.timedelta(days=today.weekday())
     end_of_week = start_of_week + datetime.timedelta(days=6)

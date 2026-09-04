@@ -35,11 +35,17 @@ def open(food_log: mm.FoodLog):
     )
     # C. Allow user to edit the macro values
     utils.macros_input_field(food_log.macros, 'edit_macros_value', show_macroval=True)
-    # D. Draw toggle and buttons for saving/deleting
-    st.toggle(
-        label="✅ Eaten", 
-        key="edit_eat_status"
-    )
+    # D. Draw a button toggle for the eat status
+    # 1. 
+    if st.session_state.edit_eat_status == True:
+        if st.button("✅ Eaten",width='stretch'):
+            st.session_state.edit_eat_status = False
+            st.rerun(scope='fragment')
+    elif st.session_state.edit_eat_status == False:
+        if st.button("⬜ Eaten",width='stretch'):
+            st.session_state.edit_eat_status = True
+            st.rerun(scope='fragment')
+
     # E. Define the target actions using your existing class methods
     def save_action():
         # Update the existing object's attributes with the new UI widget states
