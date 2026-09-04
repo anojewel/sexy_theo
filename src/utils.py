@@ -171,6 +171,16 @@ def macros_input_field(initial_macroval: mm.MacroVal, target_macroval_key, show_
         format="%.1f",
         min_value=0.0
     )
+def username_selector():
+    initialize('selected_user','Sexy Theo')
+    with st.sidebar:
+        st.selectbox(
+            label = "Select User",
+            options = ["Sexy Ano", "Sexy Theo", "Guest"],
+            key = "selected_user",
+            on_change=state_del,
+            args=(['food_data','goals','bucket_values'],),  
+            persist_state='session'
+        )
 
-    
     

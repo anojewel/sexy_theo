@@ -142,19 +142,19 @@ def save_goal(goal_log, goals_data):
         'start_date': str(goal_log.start_date),
         'end_date': str(goal_log.end_date)
     }
-    #try:
-    if goal_log.id is None:
-        # Save new
-        new_dict = conn.table("goals").insert(payload).execute()
-        goals_data.list_of_dict.extend(new_dict.data)
-    else:
-        # Save edits
-        edited_dict = conn.table("goals").update(payload).eq('id', int(goal_log.id)).execute()
-        for x in goals_data.list_of_dict:
-            if x['id'] == int(goal_log.id):
-                x.update(edited_dict.data[0])
-    #except Exception as e:
-        #st.error("Could not save your goal. Check your connection.", icon="⚠️")
+    try:
+        if goal_log.id is None:
+            # Save new
+            new_dict = conn.table("goals").insert(payload).execute()
+            goals_data.list_of_dict.extend(new_dict.data)
+        else:
+            # Save edits
+            edited_dict = conn.table("goals").update(payload).eq('id', int(goal_log.id)).execute()
+            for x in goals_data.list_of_dict:
+                if x['id'] == int(goal_log.id):
+                    x.update(edited_dict.data[0])
+    except Exception as e:
+        st.error("Could not save your goal. Check your connection.", icon="⚠️")
 
 def delete_goal(goal_log, goals_data):
     try:
