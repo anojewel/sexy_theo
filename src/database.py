@@ -4,7 +4,6 @@ import datetime
 import pandas as pd
 from st_supabase_connection import SupabaseConnection
 from streamlit_extras.mandatory_date_range import *
-from zoneinfo import ZoneInfo
 # Self
 from . import macro_models as mm
 
