@@ -1,20 +1,10 @@
 import streamlit as st
 import datetime 
-import pandas as pd
-import plotly.express as px
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
-from st_supabase_connection import SupabaseConnection
 from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
-from PIL import Image
 # Self
-from src import visuals
-from src import database as db
-from src import utils
-from src import macro_models as mm
-
+from src import db, lmn, mm, utils
 import ui
 class FoodCards:
     def __init__(self):
@@ -84,7 +74,7 @@ def draw():
         st.session_state.bucket_values = utils.goal_specificity_choose(st.session_state.selected_date)
         
         st.plotly_chart(
-            visuals.donut_progress_bars(
+            lmn.donut_progress_bars(
                 water_values=st.session_state.water_values,
                 oil_values=st.session_state.oil_values,
                 bucket_values=st.session_state.bucket_values

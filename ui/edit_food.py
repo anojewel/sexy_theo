@@ -10,10 +10,7 @@ from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
 from PIL import Image
 # Self
-from src import visuals
-from src import database as db
-from src import utils
-from src import macro_models as mm
+from src import db, lmn, mm, utils
 
 @st.dialog("✏️ Edit Log", on_dismiss = lambda: utils.state_del(["edit_food_name", "edit_datetime", "edit_eat_status",'edit_macros_value']))
 def open(food_log: mm.FoodLog):
@@ -23,10 +20,7 @@ def open(food_log: mm.FoodLog):
     utils.initialize('edit_eat_status', food_log.eat_status)
 
     # A. Allow user to edit the food text
-    st.text_input(
-            label="Food Name", 
-            key= "edit_food_name",
-        )
+    lmn.food_name_select(st.session_state.food_data, 'edit_food_name', 'edit_macros_value')
     # B.2 Allow user to edit datetime
     st.datetime_input(
         label="Date & Time", 
@@ -34,7 +28,7 @@ def open(food_log: mm.FoodLog):
         label_visibility = "collapsed",
     )
     # C. Allow user to edit the macro values
-    utils.macros_input_field(food_log.macros, 'edit_macros_value', show_macroval=True)
+    lmn.macros_input_field(food_log.macros, 'edit_macros_value', show_macroval=True)
     # D. Draw a button toggle for the eat status
     # 1. 
     if st.session_state.edit_eat_status == True:
@@ -74,7 +68,7 @@ def open(food_log: mm.FoodLog):
         st.rerun()
 
     # E1. Draw the pills and pass the actions
-    utils.pill_buttons(
+    lmn.pill_buttons(
         actions={
             "💾 Save": save_action,
             "❌ Delete": delete_action

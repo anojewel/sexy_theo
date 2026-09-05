@@ -3,9 +3,7 @@ import datetime
 import calendar
 from streamlit_extras.mandatory_date_range import *
 
-from src import database as db
-from src import utils
-from src import macro_models as mm
+from src import db, lmn, mm, utils
 
 @st.dialog("✏️ Edit Goal", on_dismiss=lambda: utils.state_del(["edit_goal_date", "edit_goal_macros"]))
 def open(goals_log: mm.GoalsLog):
@@ -30,7 +28,7 @@ def open(goals_log: mm.GoalsLog):
             key='edit_goal_date'
         )
     
-    utils.macros_input_field(goals_log.macros, 'edit_goal_macros',show_macroval=True)
+    lmn.macros_input_field(goals_log.macros, 'edit_goal_macros',show_macroval=True)
 
     # 3. Validation Logic
     def _get_range_error(view_mode, date_tuple):
@@ -83,7 +81,7 @@ def open(goals_log: mm.GoalsLog):
         st.rerun()
 
     # 5. Draw Action Pills
-    utils.pill_buttons(
+    lmn.pill_buttons(
         actions={
             "💾 Save": save_action,
             "❌ Delete": delete_action

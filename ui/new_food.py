@@ -3,11 +3,9 @@ import datetime
 from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
+from streamlit_tags import st_tags
 
-from src import visuals
-from src import database as db
-from src import utils
-from src import macro_models as mm
+from src import db, lmn, mm, utils
 
 @st.dialog("➕ New Food")
 def open():
@@ -21,7 +19,7 @@ def open():
         same_date_df = food_df[food_df['date']==st.session_state.new_datetime.date()]
         st.session_state.sum_same_date = same_date_df[[x.key for x in mm.macro_ui_rules]].sum()
         st.plotly_chart(
-            visuals.donut_progress_bars(
+            lmn.donut_progress_bars(
             water_values=st.session_state.sum_same_date,
             oil_values=st.session_state.new_macros_val.dict(),
             bucket_values=st.session_state.bucket_values
@@ -35,10 +33,7 @@ def open():
 
     # A. Let user fill food name 
     utils.initialize('new_food_name','')
-    st.text_input(
-        label="Food Name", 
-        key="new_food_name"
-    )
+    lmn.food_name_select(st.session_state.food_data, 'new_food_name', 'new_macros_val')
     
     # B. Let user fill datetime
     st.datetime_input(
@@ -48,9 +43,10 @@ def open():
     )
     
     # C. Draw the input fields (Key perfectly matches now!)
-    utils.macros_input_field(mm.MacroVal(0.0,0.0,0.0,0.0), 'new_macros_val')
-    
-    # D. Log button & Clear button actions
+    lmn.macros_input_field(mm.MacroVal(0.0,0.0,0.0,0.0), 'new_macros_val')
+    # D. Ingredient add
+
+    # E. Log button & Clear button actions
     def save_action():
         food_draft = mm.FoodLog(
             food_name=st.session_state.new_food_name,
@@ -76,12 +72,11 @@ def open():
         st.rerun(scope='fragment')
         
     # D1. Draw the pills
-    utils.pill_buttons(
+    lmn.pill_buttons(
         actions={
             "➕ Log Food": save_action,
             "🧹 Clear": clear_action
         },
         key="input_pill_key"
     )
-        
-    st.button("Ingredient Mode", width='stretch', icon="🥣")
+    

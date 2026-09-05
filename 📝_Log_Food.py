@@ -5,11 +5,7 @@ from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
 from PIL import Image
 # In-app
-from src import database as db
-from src import macro_models as mm
-from src import utils
-from src import visuals
-
+from src import db, lmn, mm, utils
 import ui
 
 ### WEB CONFIGURATION ###
@@ -32,7 +28,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 ### BEGIN INITIALIZATION ###
 # 1. Username selector package:
-utils.username_selector()
+lmn.username_selector()
 # 2. Iniitalize the database form supabase
 if 'food_data' not in st.session_state:
     st.session_state.food_data = db.FromSupabase(st.session_state.selected_user,'food_data')

@@ -10,6 +10,10 @@ class FoodLog:
         self.time = time
         self.username = username
         self.eat_status = eat_status
+        self.recipe = []
+
+    def add_ingredient(self, ingr_id: int, weight: float):
+        self.recipe.append(IngrInFood(ingr_id, weight))
 class MacroVal:
     '''
     Holds the values of a particular set of numbers representing the calories carbs and protein
@@ -34,6 +38,18 @@ class GoalsLog:
         self.end_date = end_date
         self.macros= macros
         self.id = id
+class Ingr:
+    def __init__(self,username,display_name,macros:MacroVal,weight,category,id=None):
+        self.username = username
+        self.display_name = display_name
+        self.macros = macros
+        self.weight = weight
+        self.category = category
+        self.id = id
+class IngrInFood:
+    def __init__(self, ingr_id: int, weight_used: float):
+        self.ingr_id = ingr_id
+        self.weight_used = weight_used
 class MacroUI:
     """
     Holds the UI rules and display settings for drawing a macro input field or progress bar.

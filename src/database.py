@@ -8,17 +8,15 @@ from zoneinfo import ZoneInfo
 # Self
 from . import macro_models as mm
 
+
 # CONNECT FIRST
 conn = st.connection("supabase", type=SupabaseConnection)
-
 class FromSupabase:
     def __init__(self, username, table):
         self.username = username
         self.table = table
         # This is the line that directly downloads
         self.list_of_dict = conn.table(table).select("*").eq("username", self.username).execute().data
-        
-    # 1. Helps convert to dataframe
     def df(self):
         if self.table == 'food_data':
             food_columns = ['food_name','calories','carbs','protein','fat','date','time','username','eat_status','id']
@@ -48,8 +46,6 @@ class FromSupabase:
                         end_date=lambda df: pd.to_datetime(df["end_date"]).dt.date,
                     )
                 return goals_df
-
-    # 2. Helps convert into list of objects
     def list(self):
         payload_list = []
         if self.table == 'food_data':
@@ -77,19 +73,6 @@ class FromSupabase:
                 )
                 payload_list.append(goals_log)
         return payload_list
-
-    def dict(self, index:int):
-        if self.table == 'user_settings':
-            if not self.list_of_dict:
-                payload_dict = {
-                    'id':None,
-                    'username':None,
-                    'current_goal_id':None
-                }
-            else:
-                payload_dict = self.list_of_dict[index]
-        return payload_dict
-
 def save_food(food_log, food_data):
     payload = {
         'food_name': food_log.food_name,
@@ -116,9 +99,7 @@ def save_food(food_log, food_data):
                 if x['id'] == int(food_log.id):
                     x.update(edited_dict.data[0])
     except Exception as e:
-        st.error("Could not save your food log. Check your connection and try again.", icon="⚠️")
-        
-# 2. Module to delete item from database
+        st.error("Could not save your food log. Check your connection and try again.", icon="⚠️")       
 def delete_food(food_log, food_data):
     try:
         conn.table("food_data").delete().eq('id',int(food_log.id)).execute()
@@ -128,8 +109,7 @@ def delete_food(food_log, food_data):
                 food_data.list_of_dict.remove(x)
                 break
     except Exception as e:
-        st.error("Could not delete your food log. Check your connection and try again.", icon="⚠️")
-        
+        st.error("Could not delete your food log. Check your connection and try again.", icon="⚠️")      
 def save_goal(goal_log, goals_data):
     # Reverted payload mapping to start_date and end_date
     payload = {
@@ -155,7 +135,6 @@ def save_goal(goal_log, goals_data):
                     x.update(edited_dict.data[0])
     except Exception as e:
         st.error("Could not save your goal. Check your connection.", icon="⚠️")
-
 def delete_goal(goal_log, goals_data):
     try:
         conn.table("goals").delete().eq('id', int(goal_log.id)).execute()

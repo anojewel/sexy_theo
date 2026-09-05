@@ -12,10 +12,7 @@ from zoneinfo import ZoneInfo
 from PIL import Image
 
 # Self
-from src import visuals
-from src import database as db
-from src import utils
-from src import macro_models as mm
+from src import db, lmn, mm, utils
 
 import ui
 
@@ -58,7 +55,7 @@ def open(view_mode):
         date_range_picker(title='', key='new_goal_custom')
         
     ### 3. MacroVal input fields ###
-    utils.macros_input_field(mm.MacroVal(1700,220,100,55), 'new_goal_macros',show_macroval=True)
+    lmn.macros_input_field(mm.MacroVal(1700,220,100,55), 'new_goal_macros',show_macroval=True)
     
     ### 4. Time input processing & Validation Definitions ###
     time_key_map = {
@@ -131,7 +128,7 @@ def open(view_mode):
 
     ### 6. Draw the Action Pills ###
     
-    utils.pill_buttons(
+    lmn.pill_buttons(
         actions={
             "💾 Save": _save_new_goal,
             "🗑️ Clear": _clear_new_goal
