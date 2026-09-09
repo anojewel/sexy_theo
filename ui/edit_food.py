@@ -20,23 +20,38 @@ def open(food_log: mm.FoodLog):
     utils.initialize(new_ingr_macrosval_key, mm.MacroVal(0.0,0.0,0.0,0.0))
     # Z. Donut display
     display_macros_val = st.session_state[edit_macros_key] + st.session_state[new_ingr_macrosval_key]
+    
     try:
-        st.session_state[edit_bucket_key] = utils.goal_specificity_choose(food_log.date)
-        if edit_bucket_key in st.session_state:
-                # For plotly to use the chosen date
-                food_df = st.session_state.food_data.df()
-                st.plotly_chart(
-                    lmn.donut_progress_bars(
-                    water_values=st.session_state.sum_same_date,
-                    oil_values=display_macros_val.dict(),
-                    bucket_values=st.session_state[edit_bucket_key],
-                    hole_size=0.75
-                    ),
-                    width='stretch'
-                )         
-    except Exception:
+        # 1. Fetch the Goal (Bucket) and convert the Pandas Series to a dictionary
+        st.session_state[edit_bucket_key] = utils.goal_specificity_choose(food_log.date).to_dict()
+        
+        # 2. Fetch the Day Total (Water) and convert to dictionary
+        day_total_series = utils.day_total(food_log.date, food_log.eat_status, st.session_state.food_data)
+        water_dict = day_total_series.to_dict()
+        
+        # 3. Prevent Double Counting: Subtract the original food macros from the water 
+        # so the new edits (oil) don't incorrectly stack on top of the old version
+        original_true_macros = food_log.ingr_macroval_summed(
+            st.session_state.ingredients_list, 
+            st.session_state.recipe_list
+        )
+        for x in mm.macro_ui_rules:
+            water_dict[x.key] = max(0, water_dict[x.key] - getattr(original_true_macros, x.key))
+
+        # 4. Draw the Chart
+        st.plotly_chart(
+            lmn.donut_progress_bars(
+                water_values=water_dict,
+                oil_values=display_macros_val.dict(),
+                bucket_values=st.session_state[edit_bucket_key],
+                hole_size=0.75
+            ),
+            width='stretch'
+        )        
+        
+    except ValueError: # Narrowed from Exception to catch your specific utils guard clause
         lmn.macro_badge_button(display_macros_val, f"badge_{food_log.id}")
-        st.info("No goals set yet! Set a goal that includes this food's logged date",icon="🎯")
+        st.info("No goals set yet! Set a goal that includes this food's logged date", icon="🎯")
     # A. Allow user to edit the food text
     lmn.food_name_select(st.session_state.food_data, edit_name_key, edit_macros_key)
     # B.2 Allow user to edit datetime

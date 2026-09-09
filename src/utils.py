@@ -1,5 +1,6 @@
 # Third Party
 import streamlit as st
+import pandas as pd
 from streamlit_extras.mandatory_date_range import *
 # Self
 from . import macro_models as mm
@@ -42,10 +43,6 @@ def goal_specificity_choose(target_date:date):
         
     contain_target_df['duration'] = contain_target_df['end_date'] - contain_target_df['start_date']
     return contain_target_df.sort_values(by='duration').iloc[0]
-import pandas as pd
-import streamlit as st
-from . import macro_models as mm
-
 def day_total(date, is_eaten, food_data, ingredient_list=None, recipe_list=None):
     """
     Calculates the true total sum of each macronutrient (base + ingredients) for a specific day.
