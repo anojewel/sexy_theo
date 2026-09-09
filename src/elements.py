@@ -238,10 +238,10 @@ def recipe_builder(food: mm.FoodLog, ingredient_list: list, recipe_list: list, e
     utils.initialize(ingr_select_key, ingr_in_food)
     
     selected_items = st.multiselect(
-        label="Add Ingredient",
+        label="Ingredients:",
         label_visibility="collapsed",
         accept_new_options=True,
-        placeholder="Add ingredients here and edit the weight below.",
+        placeholder="Choose or write new ingredient.",
         options=ingredient_list,
         format_func=lambda p: p.display_name if isinstance(p, mm.Ingr) else p,
         key=ingr_select_key
