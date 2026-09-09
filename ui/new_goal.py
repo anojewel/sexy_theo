@@ -111,7 +111,7 @@ def open(view_mode):
             end_date=end_val,
             macros=st.session_state.new_goal_macros,
         )
-        db.save_goal(payload_goal, st.session_state.goals)
+        db.save([payload_goal], st.session_state.goals)
         
         # Clean up widget states upon saving, then close dialog
         utils.state_del([active_time_key, 'new_goal_macros'])

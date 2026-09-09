@@ -1,5 +1,6 @@
 import streamlit as st
 import datetime 
+import pandas as pd
 from streamlit_extras.floating_button import floating_button
 from streamlit_extras.mandatory_date_range import *
 from zoneinfo import ZoneInfo
@@ -12,8 +13,9 @@ class FoodCards:
     def single_food_card(food_log: mm.FoodLog):
         # A. Write the button labels
         macro_string = ""
+        true_macros = food_log.ingr_macroval_summed(st.session_state.ingredients_list, st.session_state.recipe_list)
         for x in mm.macro_ui_rules:
-            macro_string = macro_string + f"{x.emoji} {getattr(food_log.macros,x.key)} {x.unit} "
+            macro_string += f"{x.emoji} {getattr(true_macros, x.key):.1f} {x.unit} "
         if food_log.eat_status == True:
             button_label = f"**{food_log.food_name}** ‎ ‎ {food_log.time:%H:%M} \n\n {macro_string}"
         else:
@@ -28,9 +30,9 @@ class FoodCards:
         if card_button:
             # C.1 Open the food editor
             ui.edit_food.open(food_log)
-    def draw_cards_day(date_input,food_data:db.FromSupabase):
+    def draw_cards_day(date_input,food_list):
         # Filter the same date
-        same_date_list = [x for x in food_data.list() if x.date == date_input]
+        same_date_list = [x for x in food_list if x.date == date_input]
         # Sort the list by oldest
         same_date_list.sort(key = lambda x: x.time)
         # Draw button that alters the selected date in the dashboard
@@ -50,9 +52,10 @@ class FoodCards:
         # This is for the date buttons from draw_cards_day, put here so it doesnt repeat too much
         utils.initialize('selected_date', datetime.datetime.now(ZoneInfo("Asia/Taipei")).date())
         # date lists
-        date_list = [x.date for x in food_data.list() if ((date_range[0]<=x.date)&(x.date<=date_range[1]))]
+        food_list = food_data.list()
+        date_list = [x.date for x in food_list if ((date_range[0]<=x.date)&(x.date<=date_range[1]))]
         for single_date in sorted(set(date_list), reverse=True):
-            FoodCards.draw_cards_day(single_date, food_data)
+            FoodCards.draw_cards_day(single_date, food_list)
 
 def draw():
     # Initialize the values. These are used multiple times throughout this specific page:

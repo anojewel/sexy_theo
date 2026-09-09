@@ -5,6 +5,7 @@ from PIL import Image
 # In-app
 from src import db, lmn
 import ui
+from src import utils
 
 ### WEB CONFIGURATION ###
 # Streamlit configuration
@@ -28,15 +29,8 @@ st.markdown("""
 # 1. Username selector package:
 lmn.username_selector()
 # 2. Iniitalize the database form supabase
-if 'food_data' not in st.session_state:
-    st.session_state.food_data = db.FromSupabase(st.session_state.selected_user,'food_data')
-if 'goals' not in st.session_state:
-    st.session_state.goals = db.FromSupabase(st.session_state.selected_user,'goals')
-### END INITIALIZATION ###
-
-### BEGIN SIDEBAR UI ###
-
-        
-### END SIDEBAR UI ###
+db.initialize(st.session_state.selected_user)
 
 ui.dashboard.draw()
+
+lambda: utils.ai_debug_panel()

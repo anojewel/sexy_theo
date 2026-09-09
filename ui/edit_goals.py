@@ -70,12 +70,12 @@ def open(goals_log: mm.GoalsLog):
             
         goals_log.macros = st.session_state.edit_goal_macros
         
-        db.save_goal(goals_log, st.session_state.goals)
+        db.save([goals_log], st.session_state.goals)
         utils.state_del(["edit_goal_date", "edit_goal_macros", 'bucket_values'])
         st.rerun()
 
     def delete_action():
-        db.delete_goal(goals_log, st.session_state.goals)
+        db.delete([goals_log], st.session_state.goals)
         utils.state_del(["edit_goal_date", "edit_goal_macros",'bucket_values'])
         st.rerun()
 
