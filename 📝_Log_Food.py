@@ -33,4 +33,3 @@ db.initialize(st.session_state.selected_user)
 
 ui.dashboard.draw()
 
-lambda: utils.ai_debug_panel()
