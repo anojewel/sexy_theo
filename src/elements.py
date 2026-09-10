@@ -7,8 +7,9 @@ from . import macro_models as mm
 from . import database as db
 from . import utils
 def macro_badge_button(macroval: mm.MacroVal, button_key: str):
+    blank_space = "‎ ‎ ‎‎ ‎ ‎"
     # 1. Generate the emoji string
-    label_str = "   ".join([f"{x.emoji} {getattr(macroval, x.key):.0f}" for x in mm.macro_ui_rules])
+    label_str = "".join([f"{blank_space}{x.emoji} {getattr(macroval, x.key):.0f}{blank_space}" for x in mm.macro_ui_rules])
     
     # 2. Draw the button
     st.button(
@@ -18,6 +19,53 @@ def macro_badge_button(macroval: mm.MacroVal, button_key: str):
         key=button_key,
         disabled=False
     )
+def donut_skeleton(hole_size=0.75):
+    # No math required, just instantly build the room
+    fig = make_subplots(
+        rows = 1,
+        cols = 4,
+        specs = [[ {"type" : "domain"}] * 4]
+    )
+    
+    for index, x in enumerate(mm.macro_ui_rules, start=1):
+        fig.add_trace(
+            go.Pie(
+                values = [1], # A single solid shape
+                marker_colors=['rgba(128, 128, 128, 0.2)'], # Semi-transparent grey
+                hole = hole_size, 
+                textinfo = "none",
+                hoverinfo = "skip",
+                sort = False,
+            ),
+            row = 1,
+            col = index,
+        )
+        
+        # Add the exact same text formatting, but with a loading indicator for the numbers
+        x_pos = (index - 1) * 0.261 + 0.109
+        
+        fig.add_annotation(
+            text=f"{x.emoji}", x=x_pos, y=0.52, xref="paper", yref="paper",
+            xanchor="center", yanchor="middle", showarrow=False, font=dict(size=20)
+        )
+        fig.add_annotation(
+            text=f"{x.title}", x=x_pos, y=1.02, xref="paper", yref="paper",
+            xanchor="center", yanchor="middle", showarrow=False, font=dict(size=14)
+        )
+        fig.add_annotation(
+            text="...", x=x_pos, y=0.39, xref="paper", yref="paper", # "..." instead of numbers
+            xanchor="center", yanchor="middle", showarrow=False, font=dict(size=14, color="gray")
+        )
+
+    fig.update_layout(
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(255,255,255,0.02)",
+        height=130,
+        margin=dict(l=0, r=0, t=10, b=0)
+    )
+    
+    return fig
 def donut_progress_bars(water_values, oil_values, bucket_values, hole_size=0.62):
     # Plotly function that make a single element room, that can put four plots in it
     fig = make_subplots(
@@ -228,7 +276,10 @@ def food_name_select(food_data:db.Supabase, target_key:str, macroval_key:str):
         key=target_key,
         accept_new_options=True
     )   
-def recipe_builder(food: mm.FoodLog, ingredient_list: list, recipe_list: list, edit_payload_key: str, new_payload_key: str, target_macroval_key: str):
+def recipe_builder(food: mm.FoodLog, edit_payload_key: str, new_payload_key: str, target_macroval_key: str):
+    ingredient_list = st.session_state.ingredients_list
+    recipe_list = st.session_state.recipe_list
+
     # 1. Retrieve current database links
     rcp_in_food = food.recipes(recipe_list)
     ingr_in_food = food.ingridients(ingredient_list, recipe_list)
@@ -319,3 +370,75 @@ def recipe_builder(food: mm.FoodLog, ingredient_list: list, recipe_list: list, e
         total_macros = total_macros + new_ingr.macros
 
     st.session_state[target_macroval_key] = total_macros
+def simple_or_ingr(food: mm.FoodLog, simple_macroval_key:str, ingr_macroval_key:str, target_is_simple_key:str , edit_recipe_key:str, new_ingr_key:str):
+    ingr_list = st.session_state.ingredients_list
+    recipe_list = st.session_state.recipe_list
+
+    # X. Initialize simple and ingr_macroval key
+    utils.initialize(simple_macroval_key, food.macros)
+    utils.initialize(ingr_macroval_key, food.ingr_macroval(ingr_list, recipe_list))
+
+    # A. Initialize safety fallback for empty is_simple FIRST (before we try to read it)
+    if target_is_simple_key not in st.session_state:
+        st.session_state[target_is_simple_key] = True
+
+    # --- THE PLACEHOLDER ---
+    # Reserve the physical space at the top of the UI for the badge
+    badge_placeholder = st.container()
+
+    # B. Initialize the segmented control key based on target is_simple key
+    sgmnt_key = f"sgmnt_key_{food.id}"
+    if st.session_state[target_is_simple_key] == True:
+        utils.initialize(sgmnt_key, 'Simple')
+    if st.session_state[target_is_simple_key] == False:
+        utils.initialize(sgmnt_key, 'Ingredient')
+
+    # C. Change target macroval key based on the segmented control action
+    def _change_is_simple():
+        if st.session_state[sgmnt_key] == 'Simple':
+            st.session_state[target_is_simple_key] = True
+        if st.session_state[sgmnt_key] == 'Ingredient':
+            st.session_state[target_is_simple_key] = False
+
+    # D. Segmented control for Simple vs Ingredient mode
+    st.segmented_control(
+        label= "",
+        label_visibility= 'collapsed',
+        selection_mode= 'single',
+        options=['Simple', 'Ingredient'],
+        key= sgmnt_key,
+        on_change= _change_is_simple,
+        width='stretch'
+    )
+
+    # E. Menu based on target_is_simple_key
+    if st.session_state[target_is_simple_key] == True:
+        # Simple macro editor:
+        if food.macros is not None:
+            initial_macro = food.macros
+        else:
+            initial_macro = mm.MacroVal(0.0, 0.0, 0.0, 0.0)
+        macros_input_field(initial_macro, simple_macroval_key)
+        
+    if st.session_state[target_is_simple_key] == False:
+        # Ingredient editor:
+        recipe_builder(
+            food= food,
+            edit_payload_key= edit_recipe_key,
+            new_payload_key= new_ingr_key,
+            target_macroval_key= ingr_macroval_key
+        )
+
+    # Z. Display total macros (Executed last, drawn first!)
+    badge_macro_key = f"edit_badge_{food.id}"
+    badge_button_key = f"button_key_{food.id}" 
+    
+    # Assign the correct freshly calculated math to the badge payload
+    if st.session_state[target_is_simple_key] == True:
+        st.session_state[badge_macro_key] = st.session_state[simple_macroval_key]
+    elif st.session_state[target_is_simple_key] == False:
+        st.session_state[badge_macro_key] = st.session_state[ingr_macroval_key]
+        
+    # Inject the button directly into the reserved space at the top of the layout
+    with badge_placeholder:
+        macro_badge_button(st.session_state[badge_macro_key], badge_button_key)

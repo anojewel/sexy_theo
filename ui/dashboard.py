@@ -7,29 +7,35 @@ from zoneinfo import ZoneInfo
 # Self
 from src import db, lmn, mm, utils
 import ui
+
 class FoodCards:
     def __init__(self):
         pass
+        
     def single_food_card(food_log: mm.FoodLog):
         # A. Write the button labels
         macro_string = ""
-        true_macros = food_log.ingr_macroval_summed(st.session_state.ingredients_list, st.session_state.recipe_list)
+        # Updated to true_macroval to support your new mutually exclusive toggle
+        true_macros = food_log.true_macroval(st.session_state.ingredients_list, st.session_state.recipe_list)
         for x in mm.macro_ui_rules:
             macro_string += f"{x.emoji} {getattr(true_macros, x.key):.1f} {x.unit} "
+            
         if food_log.eat_status == True:
             button_label = f"**{food_log.food_name}** ‎ ‎ {food_log.time:%H:%M} \n\n {macro_string}"
         else:
             button_label = f":grey[**{food_log.food_name}** ‎ ‎ {food_log.time:%H:%M}] \n\n :grey[{macro_string}]"
+            
         # B. Draw the cards:
         card_button = st.button(
             label= button_label,
             width= 'stretch',
-            key = f"food_card_button_{str(food_log.id)}" # Adds a key id based on the row number
+            key = f"food_card_button_{str(food_log.id)}" 
         )
         # C. Button action:
         if card_button:
             # C.1 Open the food editor
             ui.edit_food.open(food_log)
+            
     def draw_cards_day(date_input,food_list):
         # Filter the same date
         same_date_list = [x for x in food_list if x.date == date_input]
@@ -61,37 +67,40 @@ def draw():
     # Initialize the values. These are used multiple times throughout this specific page:
     utils.initialize('selected_date', datetime.datetime.now(ZoneInfo("Asia/Taipei")).date())
     utils.initialize('selected_date_range',(datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()-datetime.timedelta(days=30),datetime.datetime.now(ZoneInfo("Asia/Taipei")).date()+datetime.timedelta(days=30)))
-    st.session_state.water_values = utils.day_total(st.session_state.selected_date, True, st.session_state.food_data)
-    st.session_state.oil_values = utils.day_total(st.session_state.selected_date, False, st.session_state.food_data)
     
-    # 1. Floating action button
+    # 1. Floating action button (moved above the math so it renders instantly)
     button_clicked = floating_button(
         label="🍽️ Add Food"
     )
     if button_clicked:
         ui.new_food.open()
 
-    # 2. Try to draw the plotly donuts
-    try:
-        # Sync bucket values with the specificty of the selected date
-        st.session_state.bucket_values = utils.goal_specificity_choose(st.session_state.selected_date)
-        
-        st.plotly_chart(
-            lmn.donut_progress_bars(
-                water_values=st.session_state.water_values,
-                oil_values=st.session_state.oil_values,
-                bucket_values=st.session_state.bucket_values
-            ), 
-            width='stretch', 
-            key="main_donut_chart",
-            config={'displayModeBar': False}
-        )
-    except ValueError:
-        st.info(f"No active goal for {st.session_state.selected_date:%d %B %Y}. Head to the Goals tab to set your targets!", icon="🎯")
-    # 3. Date Range Selector
-    date_range_picker(title='',label_visibility='collapsed',key='selected_date_range')
-    # 4. Draw food cards:
-    FoodCards.draw_date_range(st.session_state.selected_date_range, st.session_state.food_data)
-    ### END MAIN UI ###
+    # --- THE DONUT PLACEHOLDER ---
+    donut_placeholder = st.empty()
+    donut_placeholder.plotly_chart(lmn.donut_skeleton(), width='stretch', config={'displayModeBar': False})
 
-   
+    # 2. Heavy Math Execution (Now happens while the skeleton is holding the layout open)
+    st.session_state.water_values = utils.day_total(st.session_state.selected_date, True, st.session_state.food_data)
+    st.session_state.oil_values = utils.day_total(st.session_state.selected_date, False, st.session_state.food_data)
+    
+    # 3. Overwrite the placeholder with the actual chart
+    with donut_placeholder:
+        try:
+            st.session_state.bucket_values = utils.goal_specificity_choose(st.session_state.selected_date)
+            
+            st.plotly_chart(
+                lmn.donut_progress_bars(
+                    water_values=st.session_state.water_values,
+                    oil_values=st.session_state.oil_values,
+                    bucket_values=st.session_state.bucket_values
+                ), 
+                width='stretch', 
+                config={'displayModeBar': False}
+            )
+        except ValueError:
+            st.info(f"No active goal for {st.session_state.selected_date:%d %B %Y}. Head to the Goals tab to set your targets!", icon="🎯")
+            
+    # 4. Date Range Selector
+    date_range_picker(title='',label_visibility='collapsed',key='selected_date_range')
+    # 5. Draw food cards:
+    FoodCards.draw_date_range(st.session_state.selected_date_range, st.session_state.food_data)

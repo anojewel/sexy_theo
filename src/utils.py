@@ -45,7 +45,7 @@ def goal_specificity_choose(target_date:date):
     return contain_target_df.sort_values(by='duration').iloc[0]
 def day_total(date, is_eaten, food_data, ingredient_list=None, recipe_list=None):
     """
-    Calculates the true total sum of each macronutrient (base + ingredients) for a specific day.
+    Calculates the true total sum of each macronutrient (base or ingredients) for a specific day.
 
     Args:
         date (datetime.date): The date to filter the food logs by.
@@ -69,13 +69,12 @@ def day_total(date, is_eaten, food_data, ingredient_list=None, recipe_list=None)
     # 3. Iterate through objects instead of raw DataFrame rows
     for food in food_data.list():
         if food.date == date and food.eat_status == is_eaten:
-            # Calculate true macros and add them to the running total
-            food_true_macros = food.ingr_macroval_summed(ingredient_list, recipe_list)
+            # Route through your mutually exclusive true_macroval method
+            food_true_macros = food.true_macroval(ingredient_list, recipe_list)
             total_macros = total_macros + food_true_macros
             
     # 4. Convert the dictionary back to a Pandas Series before returning
     return pd.Series(total_macros.dict())
-import streamlit as st
 
 def ai_debug_panel():
     with st.expander("🛠️ Debug Panel", expanded=False):

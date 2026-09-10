@@ -137,7 +137,7 @@ def initialize(target_username):
             username=target_username,
             name='food_data',
             mm_class='FoodLog',
-            columns=['food_name', 'calories', 'carbs', 'protein', 'fat', 'date', 'time', 'username', 'eat_status', 'id'],
+            columns=['food_name', 'calories', 'carbs', 'protein', 'fat', 'date', 'time', 'username', 'eat_status', 'id', 'is_simple'],
             date_columns=['date'],
             time_columns=['time']
         )

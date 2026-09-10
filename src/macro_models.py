@@ -2,7 +2,7 @@ class FoodLog:
     '''
     Holds the values of the columns in the food_data table   
     '''
-    def __init__(self, food_name, macros: MacroVal, date, time, username, eat_status, id=None):
+    def __init__(self, food_name, macros: MacroVal, date, time, username, eat_status, is_simple, id=None):
         self.id = id
         self.food_name = food_name
         self.macros = macros
@@ -10,12 +10,13 @@ class FoodLog:
         self.time = time
         self.username = username
         self.eat_status = eat_status
+        self.is_simple = is_simple
     def recipes(self, recipe_list):
         payload_list = []
         for x in recipe_list:
             if x not in payload_list:
                 if (x.food_id is not None) and (self.id is not None):
-                    if int(x.food_id) == int(self.id):
+                    if int(x.food_id) == (self.id):
                         payload_list.append(x)
         return payload_list
     # 1. Add recipe_list to the method parameters
@@ -34,11 +35,9 @@ class FoodLog:
                 
         # 3. Add the missing return statement
         return matching_ingr_list
-    def ingr_macroval_summed(self, ingr_list, recipe_list):
-        # 1. Start with the base food macros
-        total = self.macros
-        
-        # 2. Add scaled macros for each ingredient
+    def ingr_macroval(self, ingr_list, recipe_list):
+        # 1. Add scaled macros for each ingredient
+        total = MacroVal(0.0, 0.0, 0.0, 0.0)
         for recipe in self.recipes(recipe_list):
             base_ingr = recipe.ingr(ingr_list)
             
@@ -50,6 +49,11 @@ class FoodLog:
                 total = total + (base_ingr.macros * multiplier)
                 
         return total
+    def true_macroval(self, ingr_list, recipe_list):
+        if self.is_simple == True:
+            return self.macros
+        elif self.is_simple == False:
+            return self.ingr_macroval(ingr_list, recipe_list)
 class MacroVal:
     '''
     Holds the values of a particular set of numbers representing the calories carbs and protein

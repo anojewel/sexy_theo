@@ -14,8 +14,8 @@ class GoalCards:
         
         for food in food_data.list():
             if goals_log.start_date <= food.date <= goals_log.end_date:
-                # Calculate true macros (base + ingredients)
-                true_macros = food.ingr_macroval_summed(
+                # Calculate true macros (base or ingredients based on is_simple flag)
+                true_macros = food.true_macroval(
                     st.session_state.ingredients_list, 
                     st.session_state.recipe_list
                 )
@@ -60,7 +60,6 @@ class GoalCards:
             key=f"goal_card_button_{str(goals_log.id)}"
         ):
             ui.edit_goals.open(goals_log)
-
 # 1. Username selector package:
 lmn.username_selector()
 
