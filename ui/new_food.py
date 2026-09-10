@@ -29,7 +29,15 @@ def open():
     donut_placeholder = st.empty()
     donut_placeholder.plotly_chart(lmn.donut_skeleton(hole_size=0.75), width='stretch')
         
-    lmn.food_name_select(st.session_state.food_data, 'new_food_name', 'new_macros_val')
+    # A. Let user fill food name 
+    lmn.food_name_select(
+        food_data=st.session_state.food_data, 
+        name_key='new_food_name', 
+        macroval_key='new_macros_val',
+        is_simple_key='new_is_simple',
+        ingr_select_key="ingr_select_new_draft",
+        sgmnt_key="sgmnt_key_new_draft"
+    )
     
     st.datetime_input(
         label="Date & Time",    

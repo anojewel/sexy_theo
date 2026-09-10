@@ -33,7 +33,15 @@ def open(food_log: mm.FoodLog):
     donut_placeholder.plotly_chart(lmn.donut_skeleton(hole_size=0.75), width='stretch')
 
     # A. Allow user to edit the food text
-    lmn.food_name_select(st.session_state.food_data, edit_name_key, edit_macros_key)
+    # A. Allow user to edit the food text
+    lmn.food_name_select(
+        food_data=st.session_state.food_data, 
+        name_key=edit_name_key, 
+        macroval_key=edit_macros_key,
+        is_simple_key=edit_is_simple_key,
+        ingr_select_key=f"ingr_select_{food_log.id}",
+        sgmnt_key=f"sgmnt_key_{food_log.id}"
+    )
     
     # B. Allow user to edit datetime
     st.datetime_input(
