@@ -296,7 +296,6 @@ def recipe_builder(food: mm.FoodLog, edit_payload_key: str, new_payload_key: str
         options=ingredient_list,
         format_func=lambda p: p.display_name if isinstance(p, mm.Ingr) else p,
         key=ingr_select_key,
-        on_change= st.rerun(scope='fragment')
     )
     
     # 3. THE RESET: Wipe the payload slates clean
