@@ -258,24 +258,40 @@ def pill_buttons(actions: dict, key: str):
         
         # Execute the mapped function in the main flow (st.rerun() works perfectly here!)
         actions[action_str]()
-def food_name_select(food_data:db.Supabase, target_key:str, macroval_key:str):
+def food_name_select(food_data, name_key: str, macroval_key: str, is_simple_key: str, ingr_select_key: str, sgmnt_key:str):
     def fill_matching_data():
-        same_name_foodlogs = []
-        for x in food_data.list():
-            if x.food_name == st.session_state[target_key]:
-                same_name_foodlogs = same_name_foodlogs + [x]
+        same_name_foodlogs = [x for x in food_data.list() if x.food_name == st.session_state[name_key]]
+                
         if len(same_name_foodlogs) > 0:   
-            st.session_state[macroval_key] = max(same_name_foodlogs, key=lambda f:datetime.datetime.combine(f.date,f.time)).macros
+            latest_food = max(same_name_foodlogs, key=lambda f: datetime.datetime.combine(f.date, f.time))
+            
+            is_simple_val = True if latest_food.is_simple is None else latest_food.is_simple
+            
+            # Sync backend state
+            st.session_state[is_simple_key] = is_simple_val
+            
+            # Sync visual segmented control state
+            st.session_state[sgmnt_key] = "Simple" if is_simple_val else "Ingredient"
+            
+            if is_simple_val == True:
+                st.session_state[macroval_key] = latest_food.macros
+                
+            elif is_simple_val == False:
+                past_recipes = latest_food.recipes(st.session_state.recipe_list)
+                st.session_state[ingr_select_key] = latest_food.ingridients(st.session_state.ingredients_list, st.session_state.recipe_list)
+                
+                for rcp in past_recipes:
+                    st.session_state[f"edit_weight_{rcp.ingr_id}"] = rcp.weight
     food_df = food_data.df()
     st.selectbox(
         label='',
         label_visibility='collapsed',
         placeholder='Food Name',
         options=food_df['food_name'].unique(),
-        on_change= fill_matching_data,
-        key=target_key,
+        on_change=fill_matching_data,
+        key=name_key,
         accept_new_options=True
-    )   
+    )
 def recipe_builder(food: mm.FoodLog, edit_payload_key: str, new_payload_key: str, target_macroval_key: str):
     ingredient_list = st.session_state.ingredients_list
     recipe_list = st.session_state.recipe_list
@@ -295,7 +311,7 @@ def recipe_builder(food: mm.FoodLog, edit_payload_key: str, new_payload_key: str
         placeholder="Choose or write new ingredient.",
         options=ingredient_list,
         format_func=lambda p: p.display_name if isinstance(p, mm.Ingr) else p,
-        key=ingr_select_key,
+        key=ingr_select_key
     )
     
     # 3. THE RESET: Wipe the payload slates clean
