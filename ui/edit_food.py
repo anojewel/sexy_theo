@@ -112,21 +112,22 @@ def open(food_log: mm.FoodLog):
         db.save([food_log], st.session_state.food_data)
         original_recipes = food_log.recipes(st.session_state.recipe_list)
         
-        if len(st.session_state[new_ingr_key]) != 0:
-            saved_ingr_list = db.save(st.session_state[new_ingr_key], st.session_state.ingredients)
-            for saved_dict in saved_ingr_list:
-                for ingr_obj in st.session_state[new_ingr_key]:
-                    if ingr_obj.display_name == saved_dict['display_name']:
-                        ingr_obj.id = saved_dict['id']
-                        break
-                        
-        final_recipes = []
-        if len(st.session_state[edit_rcp_key]) != 0:
+        # --- IS_SIMPLE DEPENDENT RECIPE LOGIC ---
+        if not st.session_state[edit_is_simple_key]: 
+            # If in Ingredient Mode, process all recipe additions and deletions
+            if st.session_state[new_ingr_key]:
+                saved_ingr_list = db.save(st.session_state[new_ingr_key], st.session_state.ingredients)
+                for saved_dict in saved_ingr_list:
+                    for ingr_obj in st.session_state[new_ingr_key]:
+                        if ingr_obj.display_name == saved_dict['display_name']:
+                            ingr_obj.id = saved_dict['id']
+                            break
+                            
+            final_recipes = []
             for rcp in st.session_state[edit_rcp_key]:
                 rcp.food_id = food_log.id
                 final_recipes.append(rcp)
 
-        if len(st.session_state[new_ingr_key]) != 0:
             for ingr_obj in st.session_state[new_ingr_key]:
                 new_rcp = mm.Recipe(
                     food_id = food_log.id,
@@ -137,14 +138,20 @@ def open(food_log: mm.FoodLog):
                 )
                 final_recipes.append(new_rcp)
                 
-        removed_recipes = []
-        for orcp in original_recipes:
-            if orcp.id not in [rcp.id for rcp in final_recipes]:
-                removed_recipes.append(orcp)
-                
-        db.save(final_recipes, st.session_state.recipe)
-        db.delete(removed_recipes, st.session_state.recipe)
+            removed_recipes = []
+            for orcp in original_recipes:
+                if orcp.id not in [rcp.id for rcp in final_recipes]:
+                    removed_recipes.append(orcp)
+                    
+            db.save(final_recipes, st.session_state.recipe)
+            db.delete(removed_recipes, st.session_state.recipe)
+            
+        else:
+            # If in Simple Mode, actively purge any old recipes so they don't haunt the database
+            if original_recipes:
+                db.delete(original_recipes, st.session_state.recipe)
         
+        # --- CLEANUP ---
         utils.state_del([
             edit_name_key, edit_datetime_key, edit_eat_status_key, edit_macros_key,
             edit_rcp_key, new_ingr_key, new_ingr_macrosval_key, edit_is_simple_key,

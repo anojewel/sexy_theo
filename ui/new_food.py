@@ -81,21 +81,25 @@ def open():
             saved_food = db.save([food_draft], st.session_state.food_data)
             food_draft.id = saved_food[0]['id']
             
-            if len(st.session_state.new_ingr_key) != 0:
-                saved_ingr_list = db.save(st.session_state.new_ingr_key, st.session_state.ingredients)
-                for saved_dict in saved_ingr_list:
-                    for ingr_obj in st.session_state.new_ingr_key:
-                        if ingr_obj.display_name == saved_dict['display_name']:
-                            ingr_obj.id = saved_dict['id']
-                            break
-            
-            final_recipes = []
+            # --- IS_SIMPLE DEPENDENT RECIPE LOGIC ---
+            # Only process ingredients/recipes if the user is in Ingredient mode
+            if not st.session_state.new_is_simple: 
+                
+                # 1. Save any brand new ingredients to the database
+                if st.session_state.new_ingr_key: 
+                    saved_ingr_list = db.save(st.session_state.new_ingr_key, st.session_state.ingredients)
+                    for saved_dict in saved_ingr_list:
+                        for ingr_obj in st.session_state.new_ingr_key:
+                            if ingr_obj.display_name == saved_dict['display_name']:
+                                ingr_obj.id = saved_dict['id']
+                                break
+                
+                # 2. Compile and save all recipes linked to this new food
+                final_recipes = []
+                for rcp in st.session_state.edit_rcp_key:
+                    rcp.food_id = food_draft.id
+                    final_recipes.append(rcp)
 
-            for rcp in st.session_state.edit_rcp_key:
-                rcp.food_id = food_draft.id
-                final_recipes.append(rcp)
-
-            if len(st.session_state.new_ingr_key) != 0:
                 for ingr_obj in st.session_state.new_ingr_key:
                     new_rcp = mm.Recipe(
                         food_id = food_draft.id,
@@ -105,8 +109,11 @@ def open():
                         id = None                       
                     )
                     final_recipes.append(new_rcp)
-            db.save(final_recipes, st.session_state.recipe)
+                    
+                if final_recipes:
+                    db.save(final_recipes, st.session_state.recipe)
             
+            # --- CLEANUP ---
             utils.state_del([
                 'new_food_name', 'new_datetime', 'new_macros_val','bucket_values',
                 'edit_rcp_key','new_ingr_key','new_ingr_macrosval', 'new_is_simple'
