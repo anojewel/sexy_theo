@@ -95,6 +95,6 @@ if button_clicked:
 ### 3 ###
 st.markdown(f"**{active_view_mode} Goals**")
 # Goal cards draw
-for x in st.session_state.goals.list():
+for x in st.session_state.goals.list()[::-1]:
     if x.range_type == active_view_mode:
         GoalCards.single_goal_card(x, st.session_state.food_data)
