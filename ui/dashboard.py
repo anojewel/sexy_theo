@@ -92,7 +92,8 @@ def draw():
                 lmn.donut_progress_bars(
                     water_values=st.session_state.water_values,
                     oil_values=st.session_state.oil_values,
-                    bucket_values=st.session_state.bucket_values
+                    bucket_values=st.session_state.bucket_values,
+                    hole_size = 0.75
                 ), 
                 width='stretch', 
                 config={'displayModeBar': False}
