@@ -21,7 +21,7 @@ def open(food_log: mm.FoodLog):
     utils.initialize(edit_name_key, food_log.food_name)
     utils.initialize(edit_datetime_key, datetime.datetime.combine(food_log.date, food_log.time))
     utils.initialize(edit_eat_status_key, food_log.eat_status)
-    utils.initialize(edit_macros_key, food_log.macros if food_log.macros else mm.MacroVal(0.0,0.0,0.0,0.0))
+    utils.initialize(edit_macros_key, food_log.macros.copy() if food_log.macros else mm.MacroVal(0.0,0.0,0.0,0.0))
     
     is_simple_default = food_log.is_simple if food_log.is_simple is not None else True
     utils.initialize(edit_is_simple_key, is_simple_default)
@@ -105,7 +105,7 @@ def open(food_log: mm.FoodLog):
         food_log.food_name = st.session_state[edit_name_key]
         food_log.date = st.session_state[edit_datetime_key].date()
         food_log.time = st.session_state[edit_datetime_key].time()
-        food_log.macros = st.session_state[edit_macros_key]
+        food_log.macros = st.session_state[edit_macros_key].copy()
         food_log.eat_status = st.session_state[edit_eat_status_key]
         food_log.is_simple = st.session_state[edit_is_simple_key] 
         

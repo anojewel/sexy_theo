@@ -7,7 +7,7 @@ from src import db, lmn, mm, utils
 @st.dialog("✏️ Edit Goal", on_dismiss=lambda: utils.state_del(["edit_goal_date", "edit_goal_macros"]))
 def open(goals_log: mm.GoalsLog):
     # 1. Initialize Values
-    utils.initialize('edit_goal_macros', goals_log.macros)
+    utils.initialize('edit_goal_macros', goals_log.macros.copy() if goals_log.macros else mm.MacroVal(0.0, 0.0, 0.0, 0.0))
     
     if goals_log.range_type == 'Day':
         utils.initialize('edit_goal_date', goals_log.start_date)
@@ -68,7 +68,7 @@ def open(goals_log: mm.GoalsLog):
         else:
             goals_log.start_date, goals_log.end_date = active_range
             
-        goals_log.macros = st.session_state.edit_goal_macros
+        goals_log.macros = st.session_state.edit_goal_macros.copy()
         
         db.save([goals_log], st.session_state.goals)
         utils.state_del(["edit_goal_date", "edit_goal_macros", 'bucket_values'])
