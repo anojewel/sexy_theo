@@ -70,6 +70,8 @@ class MacroVal:
             "protein": self.protein,
             "fat": self.fat
         }
+    def copy(self):
+        return MacroVal(self.calories, self.carbs, self.protein, self.fat)
     def __add__(self, other):
         if isinstance(other, MacroVal):
             return MacroVal(

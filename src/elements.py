@@ -274,7 +274,9 @@ def food_name_select(food_data, name_key: str, macroval_key: str, is_simple_key:
             st.session_state[sgmnt_key] = "Simple" if is_simple_val else "Ingredient"
             
             if is_simple_val == True:
-                st.session_state[macroval_key] = latest_food.macros
+                # Copy, never alias: the number inputs mutate MacroVal in place,
+                # and latest_food.macros is the object the dashboard card renders from.
+                st.session_state[macroval_key] = latest_food.macros.copy()
                 
             elif is_simple_val == False:
                 past_recipes = latest_food.recipes(st.session_state.recipe_list)
@@ -391,7 +393,7 @@ def simple_or_ingr(food: mm.FoodLog, simple_macroval_key:str, ingr_macroval_key:
     recipe_list = st.session_state.recipe_list
 
     # X. Initialize simple and ingr_macroval key
-    utils.initialize(simple_macroval_key, food.macros)
+    utils.initialize(simple_macroval_key, food.macros.copy() if food.macros else mm.MacroVal(0.0, 0.0, 0.0, 0.0))
     utils.initialize(ingr_macroval_key, food.ingr_macroval(ingr_list, recipe_list))
 
     # A. Initialize safety fallback for empty is_simple FIRST (before we try to read it)
